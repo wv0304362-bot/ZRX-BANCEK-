@@ -179,68 +179,68 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: respostaIp });
             }
-            // --- NOVAS CONSULTAS BASEADAS NOS LINKS FORNECIDOS ---
-            else if (texto.startsWith('/consulcpf ')) {
-                const cpfAlvo = texto.replace('/consulcpf', '').trim();
+            // --- CONSULTAS COM AS APIS DO SERASA/SPC/TELEFONE FORNECIDAS ---
+            else if (texto.startsWith('/cpf ')) {
+                const cpfAlvo = texto.replace('/cpf', '').trim();
                 if (!cpfAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcpf <número do cpf>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/cpf <número>`' });
                     return;
                 }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CPF \`${cpfAlvo}\` na base de dados...` });
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CPF \`${cpfAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?cpf=${cpfAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA CPF:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO CPF:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            else if (texto.startsWith('/consulnome ')) {
-                const nomeAlvo = encodeURIComponent(texto.replace('/consulnome', '').trim());
+            else if (texto.startsWith('/nome ')) {
+                const nomeAlvo = encodeURIComponent(texto.replace('/nome', '').trim());
                 if (!nomeAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulnome <nome Completo>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/nome <nome>`' });
                     return;
                 }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando nome na base de dados...` });
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando nome...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?nome=${nomeAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA NOME:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO NOME:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/consulrg ')) {
                 const rgAlvo = texto.replace('/consulrg', '').trim();
                 if (!rgAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulrg <número do rg>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulrg <rg>`' });
                     return;
                 }
                 await waSock.sendMessage(remoteJid, { text: `🔍 Consultando RG \`${rgAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?rg=${rgAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA RG:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO RG:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            else if (texto.startsWith('/consulcel ')) {
-                const telAlvo = texto.replace('/consulcel', '').trim();
+            else if (texto.startsWith('/telefone ')) {
+                const telAlvo = texto.replace('/telefone', '').trim();
                 if (!telAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcel <telefone com ddd>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/telefone <número>`' });
                     return;
                 }
                 await waSock.sendMessage(remoteJid, { text: `🔍 Consultando Telefone \`${telAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?telefone=${telAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA TELEFONE:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO TELEFONE:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            else if (texto.startsWith('/consulemail ')) {
-                const emailAlvo = texto.replace('/consulemail', '').trim();
+            else if (texto.startsWith('/email ')) {
+                const emailAlvo = texto.replace('/email', '').trim();
                 if (!emailAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulemail <email>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/email <e-mail>`' });
                     return;
                 }
                 await waSock.sendMessage(remoteJid, { text: `🔍 Consultando E-mail \`${emailAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?email=${emailAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA E-MAIL:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO E-MAIL:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            else if (texto.startsWith('/consulcep ')) {
-                const cepAlvo = texto.replace('/consulcep', '').trim();
+            else if (texto.startsWith('/cep ')) {
+                const cepAlvo = texto.replace('/cep', '').trim();
                 if (!cepAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcep <cep>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/cep <cep>`' });
                     return;
                 }
                 await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CEP \`${cepAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/telefone0.php?cep=${cepAlvo}`);
-                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA CEP:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO CEP:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            // -----------------------------------------------------------------
+            // -------------------------------------------------------------
             else if (texto.startsWith('/SP4M ')) {
                 const partes = texto.replace('/SP4M', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
