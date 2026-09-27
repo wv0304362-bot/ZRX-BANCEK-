@@ -134,12 +134,12 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /ip <endereço>\n` +
                     `> /linkIP\n` +
                     `╠━━━⧼𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗗𝗔𝗗𝗢𝗦⧽\n` +
-                    `> /consulcpf <cpf>\n` +
-                    `> /consulnome <nome>\n` +
+                    `> /cpf <cpf>\n` +
+                    `> /nome <nome>\n` +
                     `> /consulrg <rg>\n` +
-                    `> /consulcel <telefone>\n` +
-                    `> /consulemail <e-mail>\n` +
-                    `> /consulcep <cep>\n` +
+                    `> /telefone <telefone>\n` +
+                    `> /email <e-mail>\n` +
+                    `> /cep <cep>\n` +
                     `╠━━━⧼𝗪𝗛𝗔𝗧𝗦𝗔𝗣𝗣⧽\n` +
                     `> /SP4M <número> <quantidade>\n` +
                     `> /B4N <número> <quantidade>\n` +
