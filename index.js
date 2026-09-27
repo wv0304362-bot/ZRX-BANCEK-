@@ -23,14 +23,24 @@ let jaNotificouConectado = false;
 let reconectando = false;
 
 function consultarAPI(url) {
-    return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
+    return new Promise((resolve) => {
+        const req = https.get(url, (res) => {
             let data = '';
             res.on('data', (chunk) => data += chunk);
             res.on('end', () => {
-                try { resolve(JSON.parse(data)); } catch (e) { resolve(data); }
+                try { resolve(JSON.parse(data)); } catch (e) { resolve({ resultado: data }); }
             });
-        }).on('error', (err) => reject(err));
+        });
+
+        req.on('error', (err) => {
+            resolve({ erro: "Falha na conexão com o servidor externo." });
+        });
+
+        // Timeout de 8 segundos para evitar travamento infinito
+        req.setTimeout(8000, () => {
+            req.destroy();
+            resolve({ erro: "Tempo limite esgotado (Timeout). O servidor demorou muito para responder." });
+        });
     });
 }
 
@@ -164,11 +174,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const dadosIp = await consultarAPI(`https://ipinfo.io/${ipAlvo}/json`);
-                if (dadosIp.error) {
-                    await waSock.sendMessage(remoteJid, { text: `❌ Erro: IP não encontrado` });
-                    return;
-                }
-
                 const respostaIp = 
                     `🌐 *RESULTADO IP* 🌐\n\n` +
                     `• *IP:* ${dadosIp.ip || 'N/A'}\n` +
@@ -179,7 +184,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: respostaIp });
             }
-            // --- CONSULTAS COM AS APIS DO SERASA/SPC/TELEFONE FORNECIDAS ---
             else if (texto.startsWith('/cpf ')) {
                 const cpfAlvo = texto.replace('/cpf', '').trim();
                 if (!cpfAlvo) {
@@ -240,7 +244,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/telefone0.php?cep=${cepAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO CEP:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
-            // -------------------------------------------------------------
             else if (texto.startsWith('/SP4M ')) {
                 const partes = texto.replace('/SP4M', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
