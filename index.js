@@ -130,10 +130,17 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
                     `⭐ *Status:* FREE USER\n` +
                     `🕒 *Online:* ${dataHoraAtual}\n\n` +
-                    `┏━━━⧼𝑰𝑷⧽\n` +
+                    `┏━━━⧼𝑰𝑷 & 𝑳𝑰𝑵𝙆⧽\n` +
                     `> /ip <endereço>\n` +
                     `> /linkIP\n` +
-                    `╠━━━⧼WHATSAPP⧽\n` +
+                    `╠━━━⧼𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗗𝗔𝗗𝗢𝗦⧽\n` +
+                    `> /consulcpf <cpf>\n` +
+                    `> /consulnome <nome>\n` +
+                    `> /consulrg <rg>\n` +
+                    `> /consulcel <telefone>\n` +
+                    `> /consulemail <e-mail>\n` +
+                    `> /consulcep <cep>\n` +
+                    `╠━━━⧼𝗪𝗛𝗔𝗧𝗦𝗔𝗣𝗣⧽\n` +
                     `> /SP4M <número> <quantidade>\n` +
                     `> /B4N <número> <quantidade>\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
@@ -152,28 +159,88 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             else if (texto.startsWith('/ip ')) {
                 const ipAlvo = texto.replace('/ip', '').trim();
                 if (!ipAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Por favor, informe um IP. Exemplo: `/ip 8.8.8.8`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/ip <endereço>`' });
                     return;
                 }
 
                 const dadosIp = await consultarAPI(`https://ipinfo.io/${ipAlvo}/json`);
                 if (dadosIp.error) {
-                    await waSock.sendMessage(remoteJid, { text: `❌ Erro: ${dadosIp.error.title || 'IP não encontrado'}` });
+                    await waSock.sendMessage(remoteJid, { text: `❌ Erro: IP não encontrado` });
                     return;
                 }
 
                 const respostaIp = 
                     `🌐 *RESULTADO IP* 🌐\n\n` +
                     `• *IP:* ${dadosIp.ip || 'N/A'}\n` +
-                    `• *Hostname:* ${dadosIp.hostname || 'N/A'}\n` +
                     `• *Cidade:* ${dadosIp.city || 'N/A'}\n` +
                     `• *Região:* ${dadosIp.region || 'N/A'}\n` +
                     `• *País:* ${dadosIp.country || 'N/A'}\n` +
-                    `• *Org/Provedor:* ${dadosIp.org || 'N/A'}\n` +
-                    `• *Localização (GPS):* ${dadosIp.loc || 'N/A'}`;
+                    `• *Provedor:* ${dadosIp.org || 'N/A'}`;
 
                 await waSock.sendMessage(remoteJid, { text: respostaIp });
             }
+            // --- NOVAS CONSULTAS BASEADAS NOS LINKS FORNECIDOS ---
+            else if (texto.startsWith('/consulcpf ')) {
+                const cpfAlvo = texto.replace('/consulcpf', '').trim();
+                if (!cpfAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcpf <número do cpf>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CPF \`${cpfAlvo}\` na base de dados...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?cpf=${cpfAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA CPF:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            else if (texto.startsWith('/consulnome ')) {
+                const nomeAlvo = encodeURIComponent(texto.replace('/consulnome', '').trim());
+                if (!nomeAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulnome <nome Completo>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando nome na base de dados...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?nome=${nomeAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA NOME:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            else if (texto.startsWith('/consulrg ')) {
+                const rgAlvo = texto.replace('/consulrg', '').trim();
+                if (!rgAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulrg <número do rg>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando RG \`${rgAlvo}\`...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?rg=${rgAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA RG:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            else if (texto.startsWith('/consulcel ')) {
+                const telAlvo = texto.replace('/consulcel', '').trim();
+                if (!telAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcel <telefone com ddd>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando Telefone \`${telAlvo}\`...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?telefone=${telAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA TELEFONE:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            else if (texto.startsWith('/consulemail ')) {
+                const emailAlvo = texto.replace('/consulemail', '').trim();
+                if (!emailAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulemail <email>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando E-mail \`${emailAlvo}\`...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?email=${emailAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA E-MAIL:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            else if (texto.startsWith('/consulcep ')) {
+                const cepAlvo = texto.replace('/consulcep', '').trim();
+                if (!cepAlvo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulcep <cep>`' });
+                    return;
+                }
+                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CEP \`${cepAlvo}\`...` });
+                const resultado = await consultarAPI(`http://apisbrasilpro.site/telefone0.php?cep=${cepAlvo}`);
+                await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO DA CONSULTA CEP:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
+            }
+            // -----------------------------------------------------------------
             else if (texto.startsWith('/SP4M ')) {
                 const partes = texto.replace('/SP4M', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -290,7 +357,6 @@ bot.on('photo', async (msg) => {
     const chatId = msg.chat.id;
     const caption = msg.caption || '';
 
-    // Verifica se o usuário mandou o comando /foto junto com a imagem
     if (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message) {
         try {
             bot.sendMessage(chatId, "🔄 Salvando nova foto para o menu do bot...");
