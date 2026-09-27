@@ -125,7 +125,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
                 const menuTexto = 
-                    `⛩️ *WHATSAPP BUG BOT ZRX* ⛩️\n\n` +
+                    `⛩️ *𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐁𝐔𝐆 𝐁𝐎𝐓 𝐙𝐑𝐗* ⛩️\n\n` +
                     `💬 *Suporte:* @Zenithzrx\n` +
                     `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
                     `⭐ *Status:* FREE USER\n` +
@@ -136,9 +136,21 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `╠━━━⧼WHATSAPP⧽\n` +
                     `> /SP4M <número> <quantidade>\n` +
                     `> /B4N <número> <quantidade>\n` +
-                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
+                  
                 
-                await waSock.sendMessage(remoteJid, { text: menuTexto });
+                // Caminho da foto de menu salva na raiz do repositório (opcional: menu.jpg)
+                const caminhoFoto = path.join(__dirname, 'menu.jpg');
+
+                if (fs.existsSync(caminhoFoto)) {
+                    // Envia com a foto localizada no projeto
+                    await waSock.sendMessage(remoteJid, { 
+                        image: fs.readFileSync(caminhoFoto), 
+                        caption: menuTexto 
+                    });
+                } else {
+                    // Se não tiver a foto enviada ainda, envia apenas o texto formatado perfeitamente
+                    await waSock.sendMessage(remoteJid, { text: menuTexto });
+                }
             }
             else if (texto.startsWith('/ip ')) {
                 const ipAlvo = texto.replace('/ip', '').trim();
@@ -276,42 +288,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
     }
 }
 
-// Comando de Administrador no Telegram para atualizar a foto do WhatsApp
-bot.on('photo', async (msg) => {
-    const chatId = msg.chat.id;
-    if (!waSock) {
-        return bot.sendMessage(chatId, "❌ O WhatsApp não está conectado no momento. Conecte primeiro usando `/conectar`.");
-    }
-
-    try {
-        bot.sendMessage(chatId, "🔄 Baixando e atualizando a foto de perfil no WhatsApp...");
-        
-        const fotoId = msg.photo[msg.photo.length - 1].file_id;
-        const fileLink = await bot.getFileLink(fotoId);
-        
-        // Baixa a imagem temporariamente
-        const caminhoTemp = path.join(__dirname, 'temp_perfil.jpg');
-        const fileStream = fs.createWriteStream(caminhoTemp);
-
-        https.get(fileLink, (response) => {
-            response.pipe(fileStream);
-            fileStream.on('finish', async () => {
-                fileStream.close();
-                
-                // Define a foto no WhatsApp
-                const botJid = waSock.user.id;
-                await waSock.updateProfilePicture(botJid, { url: caminhoTemp });
-                
-                if (fs.existsSync(caminhoTemp)) fs.unlinkSync(caminhoTemp);
-                bot.sendMessage(chatId, "✅ Foto de perfil do WhatsApp atualizada com sucesso!");
-            });
-        });
-    } catch (err) {
-        console.error("Erro ao atualizar foto:", err);
-        bot.sendMessage(chatId, "❌ Erro ao atualizar a foto de perfil.");
-    }
-});
-
 bot.on('callback_query', async (callbackQuery) => {
     const data = callbackQuery.data;
     if (data.startsWith('copiar_')) {
@@ -355,7 +331,6 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, 
         `🤖 *ZRX CONTROL SYSTEM* \n\n` +
         `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
-        `• Para alterar a foto do WhatsApp: *Basta enviar ou responder com uma foto aqui no chat do Telegram!*\n` +
         `• Para limpar sessão: \`/limpar\``, 
         { parse_mode: 'Markdown' }
     );
