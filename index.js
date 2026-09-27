@@ -138,17 +138,14 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /B4N <número> <quantidade>\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
-                // Caminho da foto de menu salva na raiz do repositório (opcional: menu.jpg)
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
 
                 if (fs.existsSync(caminhoFoto)) {
-                    // Envia com a foto localizada no projeto
                     await waSock.sendMessage(remoteJid, { 
                         image: fs.readFileSync(caminhoFoto), 
                         caption: menuTexto 
                     });
                 } else {
-                    // Se não tiver a foto enviada ainda, envia apenas o texto formatado perfeitamente
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
                 }
             }
@@ -288,6 +285,36 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
     }
 }
 
+// Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
+bot.on('photo', async (msg) => {
+    const chatId = msg.chat.id;
+    const caption = msg.caption || '';
+
+    // Verifica se o usuário mandou o comando /foto junto com a imagem
+    if (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message) {
+        try {
+            bot.sendMessage(chatId, "🔄 Salvando nova foto para o menu do bot...");
+
+            const fotoId = msg.photo[msg.photo.length - 1].file_id;
+            const fileLink = await bot.getFileLink(fotoId);
+
+            const caminhoMenu = path.join(__dirname, 'menu.jpg');
+            const fileStream = fs.createWriteStream(caminhoMenu);
+
+            https.get(fileLink, (response) => {
+                response.pipe(fileStream);
+                fileStream.on('finish', () => {
+                    fileStream.close();
+                    bot.sendMessage(chatId, "✅ Foto do menu atualizada com sucesso! Agora ela aparecerá no WhatsApp e no Telegram.");
+                });
+            });
+        } catch (err) {
+            console.error("Erro ao salvar foto do menu:", err);
+            bot.sendMessage(chatId, "❌ Erro ao salvar a foto.");
+        }
+    }
+});
+
 bot.on('callback_query', async (callbackQuery) => {
     const data = callbackQuery.data;
     if (data.startsWith('copiar_')) {
@@ -328,12 +355,19 @@ bot.onText(/\/conectar (.+)/, async (msg, match) => {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 
+    const startTexto = 
         `🤖 *ZRX CONTROL SYSTEM* \n\n` +
         `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
-        `• Para limpar sessão: \`/limpar\``, 
-        { parse_mode: 'Markdown' }
-    );
+        `• Para atualizar a foto do menu: *Envie uma foto com a legenda \`/foto\`*\n` +
+        `• Para limpar sessão: \`/limpar\``;
+
+    const caminhoFoto = path.join(__dirname, 'menu.jpg');
+
+    if (fs.existsSync(caminhoFoto)) {
+        bot.sendPhoto(chatId, caminhoFoto, { caption: startTexto, parse_mode: 'Markdown' });
+    } else {
+        bot.sendMessage(chatId, startTexto, { parse_mode: 'Markdown' });
+    }
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
