@@ -125,7 +125,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
                 const menuTexto = 
-                    `⛩️ *𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐁𝐔𝐆 𝐁𝐎𝐓 𝐙𝐑𝐗* ⛩️\n\n` +
+                    `⛩️ *WHATSAPP BUG BOT ZRX* ⛩️\n\n` +
                     `💬 *Suporte:* @Zenithzrx\n` +
                     `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
                     `⭐ *Status:* FREE USER\n` +
@@ -136,7 +136,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `╠━━━⧼WHATSAPP⧽\n` +
                     `> /SP4M <número> <quantidade>\n` +
                     `> /B4N <número> <quantidade>\n` +
-                  
+                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
                 // Caminho da foto de menu salva na raiz do repositório (opcional: menu.jpg)
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
