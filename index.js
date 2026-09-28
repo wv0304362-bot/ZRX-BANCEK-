@@ -342,7 +342,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH] 💥 Payload ativado para travamento de dispositivos Apple.\n".repeat(15);
+                let conteudoBugIos = "🍎 [ZRX-BUG IOS CRASH]";
                 const caminhoBugIos = path.join(__dirname, 'Buglos.txt');
                 if (fs.existsSync(caminhoBugIos)) {
                     const lido = fs.readFileSync(caminhoBugIos, 'utf-8').trim();
@@ -372,7 +372,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoBugSpam = "⚡ [ZRX-BUGSP4M] 💥 Ataque de spam pesado em andamento!\n".repeat(15);
+                let conteudoBugSpam = "⚡ [ZRX-BUGSP4M]";
                 const caminhoBugSpam = path.join(__dirname, 'BugSpam.txt');
                 if (fs.existsSync(caminhoBugSpam)) {
                     const lido = fs.readFileSync(caminhoBugSpam, 'utf-8').trim();
@@ -402,7 +402,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                let conteudoSpanBug = "🌀 [ZRX-SPANBUG] 💀 Loop infinito de caracteres e travamento!\n".repeat(15);
+                let conteudoSpanBug = "🌀 [ZRX-SPANBUG]";
                 const caminhoSpanBug = path.join(__dirname, 'SpanBug.txt');
                 if (fs.existsSync(caminhoSpanBug)) {
                     const lido = fs.readFileSync(caminhoSpanBug, 'utf-8').trim();
