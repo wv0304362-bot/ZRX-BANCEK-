@@ -158,7 +158,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             const remoteJid = remoteJidCheck(msg);
             const sender = msg.key.participant || msg.key.remoteJid;
             
-            // Captura interações de cliques em botões interativos ou listas nativas
+            // Captura completa para cliques em botões interativos modernos e antigos
             const texto = msg.message.conversation || 
                           msg.message.extendedTextMessage?.text || 
                           msg.message.imageMessage?.caption || 
@@ -180,7 +180,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL COM BOTÃO INTERATIVO NATIVO DO WHATSAPP
+            // MENU PRINCIPAL COM BOTÕES INTERATIVOS NATIVOS ATUALIZADOS
             if (texto.trim() === '/menu') {
                 const agora = new Date();
                 const dataHoraFormatada = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -195,8 +195,8 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
 
-                // Estrutura de botões interativos nativos (Call to Action / Quick Reply modernos do Baileys)
-                const buttons = [
+                // Estrutura corrigida de botões interativos compatível com Baileys moderno
+                const botoesNativos = [
                     { buttonId: '/menuip', buttonText: { displayText: '☔ BUSCA DE IP' }, type: 1 },
                     { buttonId: '/menudados', buttonText: { displayText: '👁‍🗨 CONSULTAS' }, type: 1 },
                     { buttonId: '/menubug', buttonText: { displayText: '〽️ WHATSAPP BIG' }, type: 1 },
@@ -208,20 +208,20 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                         image: fs.readFileSync(caminhoFoto),
                         caption: menuTexto,
                         footer: "ZRX CONTROL SYSTEM",
-                        buttons: buttons,
+                        buttons: botoesNativos,
                         headerType: 4
                     });
                 } else {
                     await waSock.sendMessage(remoteJid, {
                         text: menuTexto,
                         footer: "ZRX CONTROL SYSTEM",
-                        buttons: buttons,
+                        buttons: botoesNativos,
                         headerType: 1
                     });
                 }
             }
             // SUB-MENU 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
-            else if (texto.trim() === '/menuip') {
+            else if (texto.includes('/menuip')) {
                 const subMenuIP = 
                     `☔ *𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻* ☔\n\n` +
                     `> /ip <endereço>\n` +
@@ -230,7 +230,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 await waSock.sendMessage(remoteJid, { text: subMenuIP });
             }
             // SUB-MENU 2: 𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨
-            else if (texto.trim() === '/menudados') {
+            else if (texto.includes('/menudados')) {
                 const subMenuDados = 
                     `👁‍🗨 *𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾* 👁‍🗨\n\n` +
                     `> /cpf <cpf>\n` +
@@ -243,7 +243,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 await waSock.sendMessage(remoteJid, { text: subMenuDados });
             }
             // SUB-MENU 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲 〽️
-            else if (texto.trim() === '/menubug') {
+            else if (texto.includes('/menubug')) {
                 const subMenuBug = 
                     `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲* 〽️\n\n` +
                     `> /SP4M <número> <qtd>\n` +
@@ -255,7 +255,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 await waSock.sendMessage(remoteJid, { text: subMenuBug });
             }
             // SUB-MENU 4: 𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐
-            else if (texto.trim() === '/menugestao') {
+            else if (texto.includes('/menugestao')) {
                 const subMenuGestao = 
                     `🌐 *𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺* 🌐\n\n` +
                     `> /kick <número>\n` +
@@ -867,5 +867,3 @@ bot.onText(/\/start/, (msg) => {
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
-
-
