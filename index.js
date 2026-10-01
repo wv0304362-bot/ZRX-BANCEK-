@@ -18,6 +18,9 @@ http.createServer((req, res) => {
 const TELEGRAM_TOKEN = '8622724732:AAFVKNCfcYIlZqfSGmnK23Urt1VAVy1kPHE';
 const ADMIN_TELEGRAM_ID = 7714802499; // Seu ID de Administrador
 
+// Inicialização correta da instância do bot do Telegram
+const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+
 let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
@@ -171,7 +174,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL COM OS BOTÕES / SEÇÕES INTERATIVAS
+            // MENU PRINCIPAL SEPARADO POR OPÇÕES / BOTÕES
             if (texto.trim() === '/menu') {
                 const dataValidade = "13 de Dezembro";
                 const codigoIdUser = "771828";
@@ -201,16 +204,16 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
                 }
             }
-            // SEÇÃO 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
+            // SUB-MENU 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
             else if (texto.trim() === '/menuip') {
                 const subMenuIP = 
                     `☔ *𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻* ☔\n\n` +
                     `> /ip <endereço>\n` +
                     `> /linkIP\n\n` +
-                    `_Digite o comando desejado._`;
+                    `_Envie o comando desejado._`;
                 await waSock.sendMessage(remoteJid, { text: subMenuIP });
             }
-            // SEÇÃO 2: 𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨
+            // SUB-MENU 2: 𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨
             else if (texto.trim() === '/menudados') {
                 const subMenuDados = 
                     `👁‍🗨 *𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾* 👁‍🗨\n\n` +
@@ -220,10 +223,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /telefone <telefone>\n` +
                     `> /email <e-mail>\n` +
                     `> /cep <cep>\n\n` +
-                    `_Digite o comando desejado._`;
+                    `_Envie o comando desejado._`;
                 await waSock.sendMessage(remoteJid, { text: subMenuDados });
             }
-            // SEÇÃO 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️
+            // SUB-MENU 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️
             else if (texto.trim() === '/menubug') {
                 const subMenuBug = 
                     `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲* 〽️\n\n` +
@@ -232,10 +235,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /B4NGRUPO <link> [quantidade]\n` +
                     `> /travgropo <número> <qtd>\n` +
                     `> /destruir <número> <qtd>\n\n` +
-                    `_Digite o comando desejado._`;
+                    `_Envie o comando desejado._`;
                 await waSock.sendMessage(remoteJid, { text: subMenuBug });
             }
-            // SEÇÃO 4: 𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐 (Gestão e Utilitários / Grupos)
+            // SUB-MENU 4: 𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐
             else if (texto.trim() === '/menugestao') {
                 const subMenuGestao = 
                     `🌐 *𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺* 🌐\n\n` +
@@ -253,7 +256,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /setwelcome <texto>\n` +
                     `> /traduzir <idioma>\n` +
                     `> /s (Figurinha)\n\n` +
-                    `_Digite o comando desejado._`;
+                    `_Envie o comando desejado._`;
                 await waSock.sendMessage(remoteJid, { text: subMenuGestao });
             }
             else if (texto.startsWith('/ip ')) {
@@ -373,7 +376,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
