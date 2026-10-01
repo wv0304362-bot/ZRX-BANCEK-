@@ -158,9 +158,13 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             const remoteJid = remoteJidCheck(msg);
             const sender = msg.key.participant || msg.key.remoteJid;
             
+            // Captura interações de cliques em botões interativos ou listas nativas
             const texto = msg.message.conversation || 
                           msg.message.extendedTextMessage?.text || 
-                          msg.message.imageMessage?.caption || '';
+                          msg.message.imageMessage?.caption || 
+                          msg.message.buttonsResponseMessage?.selectedButtonId ||
+                          msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+                          msg.message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || '';
 
             // Sistema de XP / Nível por mensagem enviada
             if (sender && !msg.key.fromMe) {
@@ -176,7 +180,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL ESTILO COMPACTO COM BOTÕES BAILEYS
+            // MENU PRINCIPAL COM BOTÃO INTERATIVO NATIVO DO WHATSAPP
             if (texto.trim() === '/menu') {
                 const agora = new Date();
                 const dataHoraFormatada = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -189,27 +193,32 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `📅 *Data/Hora:* ${dataHoraFormatada}\n\n` +
                     `💥 *Painel de Comandos - Escolha abaixo:*`;
 
-                const botoesMenu = [
-                    { buttonId: '/menuip', buttonText: { displayText: '𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔' }, type: 1 },
-                    { buttonId: '/menudados', buttonText: { displayText: '𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨' }, type: 1 },
-                    { buttonId: '/menubug', buttonText: { displayText: '𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲 〽️' }, type: 1 },
-                    { buttonId: '/menugestao', buttonText: { displayText: '𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐' }, type: 1 }
+                const caminhoFoto = path.join(__dirname, 'menu.jpg');
+
+                // Estrutura de botões interativos nativos (Call to Action / Quick Reply modernos do Baileys)
+                const buttons = [
+                    { buttonId: '/menuip', buttonText: { displayText: '☔ BUSCA DE IP' }, type: 1 },
+                    { buttonId: '/menudados', buttonText: { displayText: '👁‍🗨 CONSULTAS' }, type: 1 },
+                    { buttonId: '/menubug', buttonText: { displayText: '〽️ WHATSAPP BIG' }, type: 1 },
+                    { buttonId: '/menugestao', buttonText: { displayText: '🌐 GESTÃO' }, type: 1 }
                 ];
 
-                const caminhoFoto = path.join(__dirname, 'menu.jpg');
-                const mensagemPayload = {
-                    buttons: botoesMenu,
-                    headerType: 4
-                };
-
                 if (fs.existsSync(caminhoFoto)) {
-                    mensagemPayload.image = fs.readFileSync(caminhoFoto);
-                    mensagemPayload.caption = menuTexto;
+                    await waSock.sendMessage(remoteJid, {
+                        image: fs.readFileSync(caminhoFoto),
+                        caption: menuTexto,
+                        footer: "ZRX CONTROL SYSTEM",
+                        buttons: buttons,
+                        headerType: 4
+                    });
                 } else {
-                    mensagemPayload.text = menuTexto;
+                    await waSock.sendMessage(remoteJid, {
+                        text: menuTexto,
+                        footer: "ZRX CONTROL SYSTEM",
+                        buttons: buttons,
+                        headerType: 1
+                    });
                 }
-
-                await waSock.sendMessage(remoteJid, mensagemPayload);
             }
             // SUB-MENU 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
             else if (texto.trim() === '/menuip') {
@@ -858,4 +867,5 @@ bot.onText(/\/start/, (msg) => {
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
+
 
