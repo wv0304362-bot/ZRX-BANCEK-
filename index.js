@@ -24,10 +24,11 @@ const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
+let numeroConectadoGlobal = "Não conectado";
 
 // Banco de dados em memória para Níveis e Configurações de Grupo
-const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
-const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
+const dadosUsuarios = {}; 
+const configuracoesGrupos = {}; 
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -82,6 +83,7 @@ function buscarFirebase(caminho) {
 async function iniciarWhatsApp(chatId, numeroTelefone) {
     if (reconectando) return;
     reconectando = true;
+    numeroConectadoGlobal = numeroTelefone;
 
     const pastaSessao = path.join(__dirname, 'sessao_teste');
     const { state, saveCreds } = await useMultiFileAuthState(pastaSessao);
@@ -174,35 +176,40 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL SEPARADO POR OPÇÕES / BOTÕES
+            // MENU PRINCIPAL ESTILO COMPACTO COM BOTÕES BAILEYS
             if (texto.trim() === '/menu') {
-                const dataValidade = "13 de Dezembro";
-                const codigoIdUser = "771828";
+                const agora = new Date();
+                const dataHoraFormatada = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
                 const menuTexto = 
-                    `✨ *Your SABIR⁷⁷¹⁸* ✨\n\n` +
-                    `📦 *User*\n` +
-                    `> 🏷️ Termina no dia ${dataValidade}.\n` +
-                    `> 🔑 Código: \`${codigoIdUser}\`\n\n` +
-                    `💥 *Insane projects perfected with dedication by SABIR⁷⁷¹⁸!* 🧞‍♂\n\n` +
-                    `┏━━━━━━━━━━━━━━━━━━━━━━┓\n` +
-                    `> /menuip  ➡️  𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔\n` +
-                    `> /menudados  ➡️  𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨\n` +
-                    `> /menubug  ➡️  𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️\n` +
-                    `> /menugestao  ➡️  𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐\n` +
-                    `┗━━━━━━━━━━━━━━━━━━━━━━┛\n` +
-                    `🔗 *TheBotDev*`;
-                
+                    `🤖 *Bot Name:* ZRX-BANCEK\n` +
+                    `👤 *Usuário:* +${numeroConectadoGlobal}\n` +
+                    `💬 *Suporte:* @Zenithzrx\n` +
+                    `🟢 *Status:* Online\n` +
+                    `📅 *Data/Hora:* ${dataHoraFormatada}\n\n` +
+                    `💥 *Painel de Comandos - Escolha abaixo:*`;
+
+                const botoesMenu = [
+                    { buttonId: '/menuip', buttonText: { displayText: '𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔' }, type: 1 },
+                    { buttonId: '/menudados', buttonText: { displayText: '𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨' }, type: 1 },
+                    { buttonId: '/menubug', buttonText: { displayText: '𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲 〽️' }, type: 1 },
+                    { buttonId: '/menugestao', buttonText: { displayText: '𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐' }, type: 1 }
+                ];
+
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
+                const mensagemPayload = {
+                    buttons: botoesMenu,
+                    headerType: 4
+                };
 
                 if (fs.existsSync(caminhoFoto)) {
-                    await waSock.sendMessage(remoteJid, { 
-                        image: fs.readFileSync(caminhoFoto), 
-                        caption: menuTexto 
-                    });
+                    mensagemPayload.image = fs.readFileSync(caminhoFoto);
+                    mensagemPayload.caption = menuTexto;
                 } else {
-                    await waSock.sendMessage(remoteJid, { text: menuTexto });
+                    mensagemPayload.text = menuTexto;
                 }
+
+                await waSock.sendMessage(remoteJid, mensagemPayload);
             }
             // SUB-MENU 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
             else if (texto.trim() === '/menuip') {
@@ -226,10 +233,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `_Envie o comando desejado._`;
                 await waSock.sendMessage(remoteJid, { text: subMenuDados });
             }
-            // SUB-MENU 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️
+            // SUB-MENU 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲 〽️
             else if (texto.trim() === '/menubug') {
                 const subMenuBug = 
-                    `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲* 〽️\n\n` +
+                    `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝕀𝕲* 〽️\n\n` +
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
                     `> /B4NGRUPO <link> [quantidade]\n` +
@@ -851,3 +858,4 @@ bot.onText(/\/start/, (msg) => {
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
+
