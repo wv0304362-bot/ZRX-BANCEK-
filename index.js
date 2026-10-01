@@ -171,9 +171,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
+            // MENU PRINCIPAL COM OS BOTÕES / SEÇÕES INTERATIVAS
             if (texto.trim() === '/menu') {
-                const numeroUsuario = remoteJid.split('@')[0];
-                const dataValidade = "13 de Dezembro"; // Data padrão customizada inspirada no seu layout
+                const dataValidade = "13 de Dezembro";
                 const codigoIdUser = "771828";
 
                 const menuTexto = 
@@ -181,38 +181,12 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `📦 *User*\n` +
                     `> 🏷️ Termina no dia ${dataValidade}.\n` +
                     `> 🔑 Código: \`${codigoIdUser}\`\n\n` +
-                    `💥 *Insane projects perfected with dedication by SABIR⁷⁷¹⁸!* 🧞‍♂️️\n\n` +
-                    `┏━━━⧼𝑰𝑷 & 𝑳𝑰𝑵𝙆⧽\n` +
-                    `> /ip <endereço>\n` +
-                    `> /linkIP\n` +
-                    `╠━━━⧼𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗗𝗔𝗗𝗢𝗦⧽\n` +
-                    `> /cpf <cpf>\n` +
-                    `> /nome <nome>\n` +
-                    `> /consulrg <rg>\n` +
-                    `> /telefone <telefone>\n` +
-                    `> /email <e-mail>\n` +
-                    `> /cep <cep>\n` +
-                    `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
-                    `> /SP4M <número> <qtd>\n` +
-                    `> /B4N <número> <qtd>\n` +
-                    `> /B4NGRUPO <link> [quantidade]\n` +
-                    `> /travgropo <número> <qtd>\n` +
-                    `> /destruir <número> <qtd>\n` +
-                    `╠━━━⧼𝗚𝗘𝗦𝗧𝗔̃𝗢 & UTILITÁRIOS⧽\n` +
-                    `> /kick <número>\n` +
-                    `> /promover <número>\n` +
-                    `> /rebaixar <número>\n` +
-                    `> /tagall <mensagem>\n` +
-                    `> /linkgrupo\n` +
-                    `> /fechar | /abrir\n` +
-                    `> /infogrupo\n` +
-                    `> /mudar-nome <nome>\n` +
-                    `> /mudar-desc <descrição>\n` +
-                    `> /divulgar <texto>\n` +
-                    `> /nivel\n` +
-                    `> /setwelcome <texto>\n` +
-                    `> /traduzir <idioma>\n` +
-                    `> /s (Figurinha)\n` +
+                    `💥 *Insane projects perfected with dedication by SABIR⁷⁷¹⁸!* 🧞‍♂\n\n` +
+                    `┏━━━━━━━━━━━━━━━━━━━━━━┓\n` +
+                    `> /menuip  ➡️  𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔\n` +
+                    `> /menudados  ➡️  𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨\n` +
+                    `> /menubug  ➡️  𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️\n` +
+                    `> /menugestao  ➡️  𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛\n` +
                     `🔗 *TheBotDev*`;
                 
@@ -226,6 +200,61 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 } else {
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
                 }
+            }
+            // SEÇÃO 1: 𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻 ☔
+            else if (texto.trim() === '/menuip') {
+                const subMenuIP = 
+                    `☔ *𝕭𝖀𝕾𝕮𝕬 𝕯𝕰 𝕴𝕻* ☔\n\n` +
+                    `> /ip <endereço>\n` +
+                    `> /linkIP\n\n` +
+                    `_Digite o comando desejado._`;
+                await waSock.sendMessage(remoteJid, { text: subMenuIP });
+            }
+            // SEÇÃO 2: 𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾 👁‍🗨
+            else if (texto.trim() === '/menudados') {
+                const subMenuDados = 
+                    `👁‍🗨 *𝕮𝕺𝕹𝕾𝕴𝕷𝕿𝕬𝕾 𝕯𝕰 𝕯𝕬𝕯𝕺𝕾* 👁‍🗨\n\n` +
+                    `> /cpf <cpf>\n` +
+                    `> /nome <nome>\n` +
+                    `> /consulrg <rg>\n` +
+                    `> /telefone <telefone>\n` +
+                    `> /email <e-mail>\n` +
+                    `> /cep <cep>\n\n` +
+                    `_Digite o comando desejado._`;
+                await waSock.sendMessage(remoteJid, { text: subMenuDados });
+            }
+            // SEÇÃO 3: 𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲 〽️
+            else if (texto.trim() === '/menubug') {
+                const subMenuBug = 
+                    `〽️ *𝖂𝕳𝕬𝕿𝕾𝕬𝕻𝕻 𝕭𝖀𝕲* 〽️\n\n` +
+                    `> /SP4M <número> <qtd>\n` +
+                    `> /B4N <número> <qtd>\n` +
+                    `> /B4NGRUPO <link> [quantidade]\n` +
+                    `> /travgropo <número> <qtd>\n` +
+                    `> /destruir <número> <qtd>\n\n` +
+                    `_Digite o comando desejado._`;
+                await waSock.sendMessage(remoteJid, { text: subMenuBug });
+            }
+            // SEÇÃO 4: 𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺 🌐 (Gestão e Utilitários / Grupos)
+            else if (texto.trim() === '/menugestao') {
+                const subMenuGestao = 
+                    `🌐 *𝕲𝕰𝕽𝕰𝕹𝕮𝕴𝕬𝕸𝕰𝕹𝕿𝕺* 🌐\n\n` +
+                    `> /kick <número>\n` +
+                    `> /promover <número>\n` +
+                    `> /rebaixar <número>\n` +
+                    `> /tagall <mensagem>\n` +
+                    `> /linkgrupo\n` +
+                    `> /fechar | /abrir\n` +
+                    `> /infogrupo\n` +
+                    `> /mudar-nome <nome>\n` +
+                    `> /mudar-desc <descrição>\n` +
+                    `> /divulgar <texto>\n` +
+                    `> /nivel\n` +
+                    `> /setwelcome <texto>\n` +
+                    `> /traduzir <idioma>\n` +
+                    `> /s (Figurinha)\n\n` +
+                    `_Digite o comando desejado._`;
+                await waSock.sendMessage(remoteJid, { text: subMenuGestao });
             }
             else if (texto.startsWith('/ip ')) {
                 const ipAlvo = texto.replace('/ip', '').trim();
@@ -344,7 +373,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
+                await waSock.sendMessage(remoteJid, { text: `🛡️️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
@@ -740,7 +769,6 @@ bot.on('photo', async (msg) => {
     const userId = msg.from.id;
     const caption = msg.caption || '';
 
-    // Verifica se é o Administrador autorizado e se enviou a foto com a legenda /foto ou respondeu a uma foto
     if (userId === ADMIN_TELEGRAM_ID && (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message)) {
         try {
             bot.sendMessage(chatId, "🔄 Salvando foto permanente do menu...");
