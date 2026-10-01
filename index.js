@@ -180,7 +180,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU PRINCIPAL COM BOTÕES INTERATIVOS NATIVOS ATUALIZADOS
+            // MENU PRINCIPAL COM BOTÕES INTERATIVOS NATIVOS MODERNOS (BAILEYS)
             if (texto.trim() === '/menu') {
                 const agora = new Date();
                 const dataHoraFormatada = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -195,12 +195,24 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
 
-                // Estrutura corrigida de botões interativos compatível com Baileys moderno
-                const botoesNativos = [
-                    { buttonId: '/menuip', buttonText: { displayText: '☔ BUSCA DE IP' }, type: 1 },
-                    { buttonId: '/menudados', buttonText: { displayText: '👁‍🗨 CONSULTAS' }, type: 1 },
-                    { buttonId: '/menubug', buttonText: { displayText: '〽️ WHATSAPP BIG' }, type: 1 },
-                    { buttonId: '/menugestao', buttonText: { displayText: '🌐 GESTÃO' }, type: 1 }
+                // Estrutura atualizada de botões interativos do Baileys moderno
+                const interactiveButtons = [
+                    {
+                        name: "quick_reply",
+                        buttonParamsJson: JSON.stringify({ display_text: "☔ BUSCA DE IP", id: "/menuip" })
+                    },
+                    {
+                        name: "quick_reply",
+                        buttonParamsJson: JSON.stringify({ display_text: "👁‍🗨 CONSULTAS", id: "/menudados" })
+                    },
+                    {
+                        name: "quick_reply",
+                        buttonParamsJson: JSON.stringify({ display_text: "〽️ WHATSAPP BIG", id: "/menubug" })
+                    },
+                    {
+                        name: "quick_reply",
+                        buttonParamsJson: JSON.stringify({ display_text: "🌐 GESTÃO", id: "/menugestao" })
+                    }
                 ];
 
                 if (fs.existsSync(caminhoFoto)) {
@@ -208,15 +220,13 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                         image: fs.readFileSync(caminhoFoto),
                         caption: menuTexto,
                         footer: "ZRX CONTROL SYSTEM",
-                        buttons: botoesNativos,
-                        headerType: 4
+                        interactiveButtons: interactiveButtons
                     });
                 } else {
                     await waSock.sendMessage(remoteJid, {
                         text: menuTexto,
                         footer: "ZRX CONTROL SYSTEM",
-                        buttons: botoesNativos,
-                        headerType: 1
+                        interactiveButtons: interactiveButtons
                     });
                 }
             }
