@@ -27,7 +27,7 @@ const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
 const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
 const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [], indiceAtual: 0, vezDe: '...' } }
 
-// JID Oficial e correto da Meta AI no WhatsApp baseado no link fornecido
+// JID Oficial e completo da Meta AI baseado no link fornecido
 const META_AI_JID = '718584497008509@s.whatsapp.net';
 
 function consultarAPI(url) {
@@ -80,7 +80,7 @@ function buscarFirebase(caminho) {
     return consultarAPI(`https://linkapi1-zrx-default-rtdb.firebaseio.com/${caminho}.json`);
 }
 
-// Função robusta para conversar de verdade com a Meta AI e aguardar a resposta real
+// Função para enviar os prompts específicos para a Meta AI e aguardar a resposta
 async function perguntarMetaAI(promptTexto) {
     try {
         console.log(`Enviando prompt para a Meta AI (${META_AI_JID}):${promptTexto}`);
@@ -93,7 +93,6 @@ async function perguntarMetaAI(promptTexto) {
                 const msg = messages[0];
                 if (!msg.message) return;
                 
-                // Verifica se a mensagem veio do chat oficial da Meta AI
                 if (msg.key.remoteJid === META_AI_JID && !msg.key.fromMe) {
                     const textoMeta = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
                     if (textoMeta) {
@@ -106,14 +105,13 @@ async function perguntarMetaAI(promptTexto) {
 
             waSock.ev.on('messages.upsert', listenerResposta);
 
-            // Timeout de segurança caso demore mais de 15 segundos
             setTimeout(() => {
                 waSock.ev.off('messages.upsert', listenerResposta);
-                resolve(respostaCapturada || "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada da sua infância.\n4. Se pudesse ter um superpoder, qual seria?\n5. Qual a coisa mais louca que você já fez?");
+                resolve(respostaCapturada || "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.\n4. Se pudesse viajar para qualquer lugar, para onde iria?\n5. Qual a sua comida favorita?");
             }, 15000);
         });
     } catch (e) {
-        return "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada da sua infância.\n4. Se pudesse ter um superpoder, qual seria?\n5. Qual a coisa mais louca que você já fez?";
+        return "1. Qual o seu maior sonho?\n2. Qual o seu maior medo?\n3. Conte uma história engraçada.\n4. Se pudesse viajar para qualquer lugar, para onde iria?\n5. Qual a sua comida favorita?";
     }
 }
 
@@ -163,7 +161,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         }
     });
 
-    // Evento de novos participantes no grupo (Boas-Vindas)
     waSock.ev.on('group-participants.update', async (update) => {
         try {
             const { id, participants, action } = update;
@@ -198,20 +195,18 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                           msg.message.extendedTextMessage?.text || 
                           msg.message.imageMessage?.caption || '';
 
-            // Se houver uma brincadeira ativa no grupo, processa a vez de quem foi marcado
+            // Fluxo contínuo da brincadeira: Quando a pessoa na vez responde e marca alguém
             if (remoteJid.endsWith('@g.us') && sessoesBrincadeira[remoteJid] && sessoesBrincadeira[remoteJid].ativa) {
                 const sessao = sessoesBrincadeira[remoteJid];
                 
-                // Verifica se a mensagem é de quem está na vez atual
                 if (sessao.vezDe && sender === sessao.vezDe && !msg.key.fromMe) {
                     const contextInfo = msg.message.extendedTextMessage?.contextInfo;
                     const mencionados = contextInfo?.mentionedJid || [];
 
                     if (mencionados.length > 0) {
-                        const proximoJogador = mencionados[0]; // Pega o usuário marcado
-                        sessao.vezDe = proximoJogador; // Atualiza quem está na vez
+                        const proximoJogador = mencionados[0]; 
+                        sessao.vezDe = proximoJogador; 
 
-                        // Pega a próxima pergunta do lote gerado pela Meta AI
                         const indice = sessao.indiceAtual || 0;
                         const proximaQuestao = sessao.lote[indice] || sessao.lote[0];
                         sessao.indiceAtual = (indice + 1) % sessao.lote.length;
@@ -219,9 +214,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                         const msgRodada = 
                             `🔥 *RESPOSTA COMPUTADA! PRÓXIMA RODADA* 🔥\n\n` +
                             `🎯 *Brincadeira:* ${sessao.tipo.toUpperCase()}\n` +
-                            `👤 *Vez de:* @${proximoJogador.split('@')[0]}\n\n` +
+                            `👤 *Agora é a vez de:* @${proximoJogador.split('@')[0]}\n\n` +
                             `📌 *Pergunta / Desafio:* \n${proximaQuestao}\n\n` +
-                            `_Responda marcando (@) outra pessoa para continuar!_`;
+                            `_Responda marcando (@) outra pessoa do grupo para continuar!_`;
 
                         await waSock.sendMessage(remoteJid, { text: msgRodada, mentions: [proximoJogador] });
                         return; 
@@ -229,7 +224,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
             }
 
-            // Sistema de XP / Nível por mensagem enviada
             if (sender && !msg.key.fromMe) {
                 if (!dadosUsuarios[sender]) dadosUsuarios[sender] = { xp: 0, level: 1 };
                 dadosUsuarios[sender].xp += 10;
@@ -301,7 +295,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
                 }
             }
-            // COMANDO DE BRINCADEIRAS (MENU)
             else if (texto.trim() === '/brincar') {
                 const menuBrincadeiras = 
                     `🎮 *ZRX - PAINEL DE BRINCADEIRAS* 🎮\n\n` +
@@ -313,7 +306,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: menuBrincadeiras });
             }
-            // COMANDO PARA PARAR A BRINCADEIRA
             else if (texto.trim() === '/para') {
                 if (sessoesBrincadeira[remoteJid]) {
                     delete sessoesBrincadeira[remoteJid];
@@ -322,7 +314,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: `⚠️ Não há nenhuma brincadeira ativa neste chat.` });
                 }
             }
-            // SELEÇÃO DA BRINCADEIRA (DIALOGANDO DIRETAMENTE COM A META AI OFICIAL)
+            // SELEÇÃO DA BRINCADEIRA COM OS PROMPTS EXATOS PARA A META AI
             else if (['verdade ou desafio', 'jogo da forca', 'pergunta e resposta'].includes(texto.trim().toLowerCase())) {
                 const tipoEscolhido = texto.trim().toLowerCase();
 
@@ -331,23 +323,31 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                await waSock.sendMessage(remoteJid, { text: `🔄 Iniciando a brincadeira: *${texto.trim()}*!\n_Enviando solicitação direto para a Meta AI oficial no WhatsApp..._` });
+                await waSock.sendMessage(remoteJid, { text: `🔄 Abrindo link da Meta AI e gerando perguntas para: *${texto.trim()}*...` });
 
-                // Pergunta real e direta para o chat da Meta AI
-                const respostaMetaAI = await perguntarMetaAI(`Gere exatamente 5 perguntas ou desafios curtos e criativos para uma brincadeira de ${tipoEscolhido}. Liste apenas as frases numeradas de 1 a 5.`);
+                let promptParaMeta = "";
+                if (tipoEscolhido === 'verdade ou desafio') {
+                    promptParaMeta = "Olá, hoje a brincadeira é verdade ou desafio. Escolha aleatoriamente um dos dois (verdade ou desafio) e faça a pergunta do desafio ou da verdade. Liste 10 opções numeradas.";
+                } else if (tipoEscolhido === 'jogo da forca') {
+                    promptParaMeta = "Olá, hoje é jogo da forca. Escolha um tema como anime, escola ou filme para começar a brincadeira e me dê 5 palavras secretas com dicas e traços (ex: P _ _ R _).";
+                } else if (tipoEscolhido === 'pergunta e resposta') {
+                    promptParaMeta = "Olá, hoje a brincadeira é pergunta e resposta. Faça 20 perguntas aleatórias e divertidas para começar a brincadeira uma por uma, numeradas de 1 a 20.";
+                }
+
+                // Dispara a requisição direto para o chat oficial da Meta AI
+                const respostaMetaAI = await perguntarMetaAI(promptParaMeta);
                 
-                // Trata e limpa o texto retornado pela Meta AI em formato de lote
                 const lotePerguntas = respostaMetaAI
                     .split('\n')
                     .map(linha => linha.trim())
                     .filter(linha => linha.length > 3 && /^\d+[\.\)]/.test(linha));
 
                 const loteFinal = lotePerguntas.length > 0 ? lotePerguntas : [
-                    `1. Qual o seu maior segredo?`,
-                    `2. Conte uma história engraçada da sua infância.`,
-                    `3. Qual seria seu superpoder favorito?`,
-                    `4. O que você faria se ganhasse na loteria?`,
-                    `5. Qual a coisa mais vergonhosa que já te aconteceu?`
+                    "1. Verdade ou Desafio? (Desafio: Envie uma foto careta no grupo!)",
+                    "2. Verdade: Qual o seu maior segredo guardado?",
+                    "3. Desafio: Mande um áudio cantando sua música favorita.",
+                    "4. Verdade: Quem você beijaria neste grupo?",
+                    "5. Desafio: Fique 1 minuto sem digitar com as letras 'E'."
                 ];
 
                 sessoesBrincadeira[remoteJid] = {
@@ -377,10 +377,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                         sessoesBrincadeira[remoteJid].pollKey = pollMsg.key;
                     }
                 } catch (e) {
-                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada com sucesso com a Meta AI!` });
+                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada com sucesso via Meta AI!` });
                 }
             }
-            // COMANDO /COMEÇAR APÓS A VOTAÇÃO
             else if (texto.trim() === '/comecar') {
                 const sessao = sessoesBrincadeira[remoteJid];
                 if (!sessao || !sessao.ativa) {
@@ -392,7 +391,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 const primeiraQuestao = sessao.lote[indice] || sessao.lote[0];
                 sessao.indiceAtual = (indice + 1) % sessao.lote.length;
 
-                // Escolhe um participante real do grupo para iniciar
                 const membrosReais = sessao.participantesGrupo || [sender];
                 const primeiroDaVez = membrosReais[Math.floor(Math.random() * membrosReais.length)];
                 
@@ -562,7 +560,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 try {
                     const idGrupo = await waSock.groupAcceptInvite(codigoConvite);
-                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Disparando ${quantidadeDenuncias} denúncias nativas silenciosas (sem mandar mensagens)...` });
+                    await waSock.sendMessage(remoteJid, { text: `✅ Entrou no grupo com sucesso! (\`${idGrupo}\`). Disparando ${quantidadeDenuncias} denúncias nativas silenciosas...` });
 
                     for (let i = 1; i <= quantidadeDenuncias; i++) {
                         try {
@@ -622,7 +620,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
-            // COMANDO DESTRUIR TOTAL
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -635,7 +632,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
 
-                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
+                await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}...` });
 
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
@@ -917,7 +914,6 @@ function remoteJidCheck(msg) {
     return msg.key.remoteJid;
 }
 
-// Comando /foto no Telegram para definir a imagem do menu de ambas as plataformas
 bot.on('photo', async (msg) => {
     const chatId = msg.chat.id;
     const caption = msg.caption || '';
