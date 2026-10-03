@@ -25,7 +25,7 @@ let reconectando = false;
 // Banco de dados em memória para Níveis, Configurações de Grupo e Estado de Brincadeiras
 const dadosUsuarios = {}; // { 'remoteJid_usuario': { xp: 0, level: 1 } }
 const configuracoesGrupos = {}; // { 'idGrupo': { bemVindoTexto: '...', bemVindoFoto: null } }
-const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [] } }
+const sessoesBrincadeira = {}; // { 'idGrupo': { ativa: true, tipo: '...', lote: [], pollMsgId: '...' } }
 
 function consultarAPI(url) {
     return new Promise((resolve) => {
@@ -194,6 +194,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /cep <cep>\n` +
                     `╠━━━⧼🎮 BRINCADEIRAS IA⧽\n` +
                     `> /brincar (Abre o menu)\n` +
+                    `> /comecar (Inicia após a votação)\n` +
                     `> /para (Encerra a brincadeira)\n` +
                     `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
                     `> /SP4M <número> <qtd>\n` +
@@ -237,7 +238,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `👉 \`Verdade ou desafio\`\n` +
                     `👉 \`Jogo da forca\`\n` +
                     `👉 \`Pergunta e resposta\`\n\n` +
-                    `_Para encerrar a qualquer momento, envie:_ \`/para\``;
+                    `_Comandos úteis:_ \`/comecar\` _ou_ \`/para\``;
 
                 await waSock.sendMessage(remoteJid, { text: menuBrincadeiras });
             }
@@ -250,7 +251,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: `⚠️ Não há nenhuma brincadeira ativa neste chat.` });
                 }
             }
-            // SELEÇÃO DA BRINCADEIRA (Verdade ou desafio, Jogo da forca, Pergunta e resposta)
+            // SELEÇÃO DA BRINCADEIRA
             else if (['verdade ou desafio', 'jogo da forca', 'pergunta e resposta'].includes(texto.trim().toLowerCase())) {
                 const tipoEscolhido = texto.trim().toLowerCase();
 
@@ -259,32 +260,55 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     return;
                 }
 
-                await waSock.sendMessage(remoteJid, { text: `🔄 Iniciando a brincadeira: *${texto.trim()}*!\n_Aguarde, gerando votação de participantes e consultando a Meta AI..._` });
+                await waSock.sendMessage(remoteJid, { text: `🔄 Iniciando a brincadeira: *${texto.trim()}*!\n_Gerando votação de participantes e consultando a Meta AI..._` });
 
                 sessoesBrincadeira[remoteJid] = {
                     ativa: true,
                     tipo: tipoEscolhido,
                     lote: [
-                        `[Exemplo gerado via Meta AI] Pergunta 1 para ${tipoEscolhido}: Qual o seu maior sonho secreto?`,
-                        `[Exemplo gerado via Meta AI] Pergunta 2 para ${tipoEscolhido}: Descreva algo inusitado que aconteceu esta semana.`
+                        `[Questão 1 gerada via Meta AI] Qual o seu maior segredo ou desafio mais louco?`,
+                        `[Questão 2 gerada via Meta AI] Conte uma história engraçada da sua infância.`
                     ]
                 };
 
-                // Criação da votação nativa (Poll) para escolher quem começa
                 try {
                     const metadata = await waSock.groupMetadata(remoteJid);
-                    const participantes = metadata.participants.slice(0, 10).map(p => p.id.split('@')[0]); // Pega até 10 membros para as opções da enquete
+                    const participantes = metadata.participants.slice(0, 10).map(p => p.id.split('@')[0]);
                     
-                    await waSock.sendMessage(remoteJid, {
+                    const pollMsg = await waSock.sendMessage(remoteJid, {
                         poll: {
                             name: `🗳️ Quem deve começar a rodada de ${tipoEscolhido}?`,
                             values: participantes.map(num => `+${num}`),
                             selectableCount: 1
                         }
                     });
+                    
+                    if (pollMsg && pollMsg.key) {
+                        sessoesBrincadeira[remoteJid].pollKey = pollMsg.key;
+                    }
                 } catch (e) {
-                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada! Enviando a primeira questão do lote...\n\n${sessoesBrincadeira[remoteJid].lote[0]}` });
+                    await waSock.sendMessage(remoteJid, { text: `✅ Brincadeira configurada com sucesso!` });
                 }
+            }
+            // COMANDO /COMEÇAR APÓS A VOTAÇÃO
+            else if (texto.trim() === '/comecar') {
+                const sessao = sessoesBrincadeira[remoteJid];
+                if (!sessao || !sessao.ativa) {
+                    await waSock.sendMessage(remoteJid, { text: `⚠️ Nenhuma brincadeira iniciada. Use \`/brincar\` primeiro!` });
+                    return;
+                }
+
+                // Exemplo simulado escolhendo o remetente atual ou um participante para começar a rodada
+                const primeiroDaVez = sender; 
+                const primeiraQuestao = sessao.lote[0] || "Rodada iniciada!";
+
+                const msgInicio = 
+                    `🔥 *A VOTAÇÃO ENCERROU / COMEÇAMOS!* 🔥\n\n` +
+                    `🎯 *Brincadeira:* ${sessao.tipo.toUpperCase()}\n` +
+                    `👤 *Vez de:* @${primeiroDaVez.split('@')[0]}\n\n` +
+                    `📌 *Desafio / Pergunta:* \n${primeiraQuestao}`;
+
+                await waSock.sendMessage(remoteJid, { text: msgInicio, mentions: [primeiroDaVez] });
             }
             else if (texto.startsWith('/ip ')) {
                 const ipAlvo = texto.replace('/ip', '').trim();
@@ -501,7 +525,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
 
                 await waSock.sendMessage(remoteJid, { text: `🔥 Operação /travgropo finalizada com sucesso nos 5 grupos!` });
             }
-            // COMANDO DESTRUIR TOTAL (TRAVA NO PV + DENÚNCIA NATIVA DE CONTATO SILENCIOSA)
+            // COMANDO DESTRUIR TOTAL
             else if (texto.startsWith('/destruir ')) {
                 const partes = texto.replace('/destruir', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
