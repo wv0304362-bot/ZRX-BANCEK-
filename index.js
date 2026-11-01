@@ -38,10 +38,7 @@ const {
 const XLX = spawn;
 const activeBots = {};
 const startTime = Date.now();
-
-// Alterado para carregar diretamente a imagem da raiz do projeto
-const LoveLogo = './8ca5272eef8a84db9a57c074a39c30eb.jpg';
-
+const LoveLogo = `${config.logo}`
 const waSessions = {};
 const pairingTracker = new Map();
 const SYLovesButton = {
@@ -269,9 +266,7 @@ async function StartLovingSY(chatId, number, S7, isreconnect = false, ownerId = 
         generateHighQualityLinkPreview: true,
         syncFullHistory: false,
         getMessage: async (key) => {
-            let jid = jidNormalizedUser(key.remoteJid);
-            let msg = await store.loadMessage(jid, key.id);
-            return msg?.message || "";
+            return { conversation: 'Hello' };
         },
         msgRetryCounterCache,
         defaultQueryTimeoutMs: 60000,
@@ -436,6 +431,10 @@ function MainSYLoVe(name, uptime, love, SABIR7718, SABANA) {
     return `┌──────┤ ${SABIR7718} ├──────┐\n│➻ Name: ${name}\n│➻ Developer: ${SABANA}\n│➻ Status: ${status}\n│➻ Online: ${uptime}\n└──────────────────────┘`;
 }
 
+function BvgSYLoVe(cleanTarget) {
+    return `┏━━━━━━〣 𝗡𝗢𝗧𝗜𝗙𝗜𝗖𝗔𝗧𝗜𝗢𝗡 〣━━━━━━━┓\n┃ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...\n┃ ᴛʜᴇ ʙᴏᴛ ɪs ᴄᴜʀʀᴇɴᴛʟʏ sᴇɴᴅɪɴɢ ʙᴜɢ \n┃ Tᴀʀɢᴇ𝒕 : ${cleanTarget}\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
+}
+
 function startSYloveBot(token) {
     try {
         const S7 = new SY(token, {
@@ -448,7 +447,7 @@ function startSYloveBot(token) {
         let botConfig = {
             channel: config.channel,
             group: config.group,
-            logo: LoveLogo, // Utiliza a imagem da raiz configurada acima
+            logo: LoveLogo,
             botName: "Ϟ 𝙕⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ",
             ownerContact: config.S7,
             protection: false,
@@ -735,6 +734,14 @@ function startSYloveBot(token) {
 └──────────────────────┘
                 `;
                 S7edit(bugText, { chat_id: chatId, message_id: messageId, ...SABIR7718 });
+            }
+
+            if (data.startsWith('copy_jid_')) {
+                const jid = data.replace('copy_jid_', '');
+                await S7.answerCallbackQuery(query.id, {
+                    text: 'JID copied to clipboard!',
+                    show_alert: false
+                });
             }
         });
 
