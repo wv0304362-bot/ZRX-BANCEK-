@@ -9,6 +9,7 @@
     "@whiskeysockets/baileys": "latest",
     "chalk": "^5.6.2",
     "crypto": "^1.0.1",
+    "node-cache": "latest",
     "node-telegram-bot-api": "^0.67.0",
     "pino": "^10.3.0",
     "ws": "^8.19.0"
