@@ -16,7 +16,23 @@ const pino = require('pino');
 let phoneNumber = "918293007159"
 const pairingCode = !!phoneNumber
 const NodeCache = require("node-cache")
-const { log } = require("@sabir7718/log")
+
+// --- LOG SYSTEM NATIVO (Substitui o pacote externo que estava a falhar) ---
+function log(type, source, message) {
+    const time = new Date().toLocaleTimeString();
+    let prefix = `[${time}]`;
+    if (source) prefix += ` [${source}]`;
+    
+    if (type === 'success') {
+        console.log(`\x1b[32m${prefix} SUCCESS:\x1b[0m ${message}`);
+    } else if (type === 'error') {
+        console.log(`\x1b[31m${prefix} ERROR:\x1b[0m ${message}`);
+    } else if (type === 'command') {
+        console.log(`\x1b[36m${prefix} COMMAND (${source}):\x1b[0m ${message}`);
+    } else {
+        console.log(`\x1b[33m${prefix} INFO:\x1b[0m ${message}`);
+    }
+}
 
 // --- GLOBAL ERROR HANDLING ---
 process.on('uncaughtException', (err) => {
@@ -89,17 +105,6 @@ async function CheckSYlovesToo(botInstance, userId, chId, grId, adminId) {
 
 const notauthorized = '🚫 You are not authorized to use this command.';
 
-const colors = {
-    reset: "\x1b[0m",
-    gray: "\x1b[90m",
-    blue: "\x1b[34m",
-    green: "\x1b[32m",
-    red: "\x1b[31m",
-    magenta: "\x1b[35m",
-    cyan: "\x1b[36m",
-    yellow: "\x1b[33m"
-};
-
 function getRuntime() {
     const now = Date.now();
     const diff = now - startTime;
@@ -136,7 +141,7 @@ const getDB = () => {
             resellers: parsed.resellers || []
         };
     } catch (err) {
-        log('error', null, 'Database Read Error: ' + err.message);
+        log('error', 'DB', 'Database Read Error: ' + err.message);
         return {
             tokens: [],
             premium: [],
@@ -149,7 +154,7 @@ const saveDB = (data) => {
     try {
         fs.writeFileSync(path.join(LoveDir, 'data.json'), JSON.stringify(data, null, 2));
     } catch (err) {
-        log('error', null, 'Database Save Error: ' + err.message);
+        log('error', 'DB', 'Database Save Error: ' + err.message);
     }
 };
 
@@ -179,24 +184,6 @@ function LoveGlobalState(userId) {
     }
     return false;
 }
-
-const Lovesbutton = {
-    reply_markup: {
-        inline_keyboard: [
-            [{
-                text: 'I| Bug Menu',
-                callback_data: 'bug_menu'
-            }, {
-                text: 'I| Misc Menu',
-                callback_data: 'misc_menu'
-            }],
-            [{
-                text: 'I| Channel ↗',
-                url: `${config.channel}`
-            }]
-        ]
-    }
-};
 
 async function SYLoveMeOk(sock) {
     try {
@@ -431,13 +418,9 @@ function MainSYLoVe(name, uptime, love, SABIR7718, SABANA) {
     return `┌──────┤ ${SABIR7718} ├──────┐\n│➻ Name: ${name}\n│➻ Developer: ${SABANA}\n│➻ Status: ${status}\n│➻ Online: ${uptime}\n└──────────────────────┘`;
 }
 
-function BvgSYLoVe(cleanTarget) {
-    return `┏━━━━━━〣 𝗡𝗢𝗧𝗜𝗙𝗜𝗖𝗔𝗧𝗜𝗢𝗡 〣━━━━━━━┓\n┃ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...\n┃ ᴛʜᴇ ʙᴏᴛ ɪs ᴄᴜʀʀᴇɴᴛʟʏ sᴇɴᴅɪɴɢ ʙᴜɢ \n┃ Tᴀʀɢᴇ𝒕 : ${cleanTarget}\n┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`;
-}
-
 function startSYloveBot(token) {
     try {
-        console.log(`[DEBUG] A iniciar bot com token: ${token.substring(0, 10)}...`);
+        log('info', 'STARTUP', `A iniciar bot com token: ${token.substring(0, 10)}...`);
         const S7 = new SY(token, {
             polling: true
         });
@@ -470,13 +453,13 @@ function startSYloveBot(token) {
         const botOwnerId = tokenData ? tokenData.owner : config.adminId;
         S7.getMe().then((botInfo) => {
             activeBots[token] = S7;
-            console.log(`[SUCCESS] Bot Conectado: ${botInfo.first_name} (@${botInfo.username})`);
+            log('success', 'BOT', `Bot Conectado: ${botInfo.first_name} (@${botInfo.username})`);
             if (token === "8590832673:AAF9YcCnbb2OcPZ11iCZ3bQ_scN-2O0q324") {
-                console.log('[DEBUG] A verificar sessões do WhatsApp...');
+                log('info', 'SYSTEM', 'A verificar sessões do WhatsApp...');
                 AutoLovingWithSY(S7);
             }
         }).catch(async (err) => {
-            console.log(`[ERROR] Falha ao conectar token: ${err.message}`);
+            log('error', 'BOT', `Falha ao conectar token: ${err.message}`);
             if (
                 err.message.includes('404') ||
                 err.message.includes('401') ||
@@ -485,9 +468,9 @@ function startSYloveBot(token) {
                 await S7Naverdead(token, err.message);
             }
         });
+
         S7.on('polling_error', (error) => {
-            console.log(`[POLLING ERROR] ${error.code}: ${error.message}`);
-            if (error.code !== 'EFATAL') return;
+            log('error', 'POLLING', `${error.code}: ${error.message}`);
         });
 
         function VOIDSEC() {
@@ -746,7 +729,7 @@ function startSYloveBot(token) {
         });
 
     } catch (err) {
-        console.error('[STARTUP ERROR]', err);
+        log('error', 'STARTUP', err.message);
     }
 }
 
