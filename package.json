@@ -1,14 +1,15 @@
 {
-  "name": "zrx-lotux-app",
+  "name": "zrx-bot-whatsapp",
   "version": "1.0.0",
-  "description": "Zeryx Spam Control Panel & WhatsApp Core",
-  "main": "server.js",
+  "description": "Painel Zeryx Spam & Bot WhatsApp - System LOTUX",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.5",
     "express": "^4.19.2",
+    "node-telegram-bot-api": "^0.66.0",
     "pino": "^9.0.0"
   },
   "engines": {
