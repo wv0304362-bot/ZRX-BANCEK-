@@ -437,6 +437,7 @@ function BvgSYLoVe(cleanTarget) {
 
 function startSYloveBot(token) {
     try {
+        console.log(`[DEBUG] A iniciar bot com token: ${token.substring(0, 10)}...`);
         const S7 = new SY(token, {
             polling: true
         });
@@ -469,14 +470,13 @@ function startSYloveBot(token) {
         const botOwnerId = tokenData ? tokenData.owner : config.adminId;
         S7.getMe().then((botInfo) => {
             activeBots[token] = S7;
-            log('success', null, `Bot Started: ${botInfo.first_name} (@${botInfo.username})`);
+            console.log(`[SUCCESS] Bot Conectado: ${botInfo.first_name} (@${botInfo.username})`);
             if (token === "8590832673:AAF9YcCnbb2OcPZ11iCZ3bQ_scN-2O0q324") {
-                log('info', 'SYSTEM', 'Checking for saved WhatsApp sessions...');
+                console.log('[DEBUG] A verificar sessões do WhatsApp...');
                 AutoLovingWithSY(S7);
             }
         }).catch(async (err) => {
-            log('error', null, `Failed to connect token: ${token.substring(0, 10)}... Error: ${err.message}`);
-
+            console.log(`[ERROR] Falha ao conectar token: ${err.message}`);
             if (
                 err.message.includes('404') ||
                 err.message.includes('401') ||
@@ -486,8 +486,8 @@ function startSYloveBot(token) {
             }
         });
         S7.on('polling_error', (error) => {
+            console.log(`[POLLING ERROR] ${error.code}: ${error.message}`);
             if (error.code !== 'EFATAL') return;
-            log('error', 'POLLING', error.message);
         });
 
         function VOIDSEC() {
@@ -746,7 +746,7 @@ function startSYloveBot(token) {
         });
 
     } catch (err) {
-        log('error', 'STARTUP', `Could not start bot with token: ${token.substring(0, 10)}...`);
+        console.error('[STARTUP ERROR]', err);
     }
 }
 
